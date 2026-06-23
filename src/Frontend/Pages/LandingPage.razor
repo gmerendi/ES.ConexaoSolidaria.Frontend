@@ -1,0 +1,577 @@
+@page "/"
+@layout LandingLayout
+@inject CampanhaPublicaService CampanhaService
+@inject NavigationManager Nav
+
+<PageTitle>Esperança Solidária — Transformando vidas</PageTitle>
+
+<!-- ═══════════════════════════════════════════════════════
+     HEADER
+════════════════════════════════════════════════════════ -->
+<header class="es-header">
+    <div class="es-header-inner">
+
+        <!-- Logo -->
+        <div class="es-logo" @onclick='() => Nav.NavigateTo("/")'>
+            <div class="es-logo-icon">
+                <MudIcon Icon="@Icons.Material.Filled.VolunteerActivism"
+                         Style="font-size:2rem; color:#FFFFFF;" />
+            </div>
+            <div>
+                <span class="es-logo-nome">Esperança</span>
+                <span class="es-logo-sobrenome"> Solidária</span>
+            </div>
+        </div>
+
+        <!-- Botão Portal -->
+        <MudButton Variant="Variant.Outlined"
+                   Style="color:#FFFFFF; border-color:rgba(255,255,255,0.7); border-radius:24px;"
+                   StartIcon="@Icons.Material.Filled.Login"
+                   OnClick='() => Nav.NavigateTo("/login")'>
+            Portal do Doador
+        </MudButton>
+
+    </div>
+</header>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     HERO
+════════════════════════════════════════════════════════ -->
+<section class="es-hero">
+    <div class="es-hero-overlay"></div>
+    <div class="es-hero-content">
+        <MudText Typo="Typo.h1" Class="es-hero-titulo">
+            Sua doação <br />transforma vidas.
+        </MudText>
+        <MudText Typo="Typo.h6" Class="es-hero-subtitulo">
+            Apoie nossas campanhas e faça parte dessa corrente de solidariedade.
+        </MudText>
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Secondary"
+                   Size="Size.Large"
+                   Style="border-radius:32px; padding:12px 36px; font-size:1.1rem; font-weight:600; margin-top:2rem;"
+                   OnClick="RolarParaCampanhas">
+            Ver Campanhas Ativas
+        </MudButton>
+    </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     NÚMEROS DE IMPACTO
+════════════════════════════════════════════════════════ -->
+<section class="es-impacto">
+    <MudGrid Justify="Justify.Center" Spacing="4">
+        <MudItem xs="6" sm="3">
+            <div class="es-stat">
+                <span class="es-stat-numero">+12.000</span>
+                <span class="es-stat-label">Vidas impactadas</span>
+            </div>
+        </MudItem>
+        <MudItem xs="6" sm="3">
+            <div class="es-stat">
+                <span class="es-stat-numero">8 anos</span>
+                <span class="es-stat-label">De história</span>
+            </div>
+        </MudItem>
+        <MudItem xs="6" sm="3">
+            <div class="es-stat">
+                <span class="es-stat-numero">3 unidades</span>
+                <span class="es-stat-label">Em São Paulo</span>
+            </div>
+        </MudItem>
+        <MudItem xs="6" sm="3">
+            <div class="es-stat">
+                <span class="es-stat-numero">240+</span>
+                <span class="es-stat-label">Colaboradores</span>
+            </div>
+        </MudItem>
+    </MudGrid>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     CAMPANHAS ATIVAS
+════════════════════════════════════════════════════════ -->
+<section class="es-campanhas" id="campanhas">
+    <div class="es-section-inner">
+
+        <div class="es-section-header">
+            <MudText Typo="Typo.h2" Class="es-section-titulo">
+                Campanhas em andamento
+            </MudText>
+            <MudText Typo="Typo.body1" Color="Color.Secondary" Class="es-section-sub">
+                Escolha uma causa e faça a diferença agora mesmo.
+            </MudText>
+        </div>
+
+        @if (_carregando)
+        {
+            <div class="es-loading">
+                <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+                <MudText Typo="Typo.body1" Class="mt-3" Color="Color.Primary">
+                    Carregando campanhas...
+                </MudText>
+            </div>
+        }
+        else if (!_campanhas.Any())
+        {
+            <MudAlert Severity="Severity.Info" Class="mt-4">
+                Nenhuma campanha ativa no momento. Volte em breve!
+            </MudAlert>
+        }
+        else
+        {
+            <MudGrid Spacing="4">
+                @foreach (var campanha in _campanhas)
+                {
+                    <MudItem xs="12" sm="6" md="4">
+                        <MudCard Class="es-card" Elevation="2">
+
+                            <!-- Cabeçalho colorido do card -->
+                            <div class="es-card-header">
+                                <MudIcon Icon="@Icons.Material.Filled.Campaign"
+                                         Style="font-size:2.5rem; color:rgba(255,255,255,0.9);" />
+                                <div class="es-card-badge">
+                                    @campanha.DiasRestantes dias restantes
+                                </div>
+                            </div>
+
+                            <MudCardContent Class="es-card-body">
+                                <MudText Typo="Typo.h6" Class="es-card-titulo">
+                                    @campanha.Titulo
+                                </MudText>
+                                <MudText Typo="Typo.body2" Class="es-card-descricao">
+                                    @TruncaDescricao(campanha.Descricao, 120)
+                                </MudText>
+
+                                <!-- Progresso -->
+                                <div class="es-progresso-bloco">
+                                    <div class="es-progresso-topo">
+                                        <span class="es-arrecadado">
+                                            R$ @campanha.ValorArrecadado.ToString()
+                                        </span>
+                                        <span class="es-meta">
+                                            de R$ @campanha.MetaFinanceira.ToString()
+                                        </span>
+                                    </div>
+                                    <MudProgressLinear Value="@((double)campanha.PercentualArrecadado)"
+                                                       Color="Color.Primary"
+                                                       Rounded="true"
+                                                       Size="Size.Medium"
+                                                       Class="es-progress-bar" />
+                                    <MudText Typo="Typo.caption" Color="Color.Primary">
+                                        @campanha.PercentualArrecadado% da meta atingida
+                                    </MudText>
+                                </div>
+                            </MudCardContent>
+
+                            <MudCardActions Class="es-card-actions">
+                                <MudButton Variant="Variant.Filled"
+                                           Color="Color.Primary"
+                                           FullWidth="true"
+                                           Style="border-radius:24px; font-weight:600;"
+                                           StartIcon="@Icons.Material.Filled.Favorite"
+                                           OnClick='() => IrParaDoacao(campanha.Guid)'>
+                                    Quero Doar
+                                </MudButton>
+                            </MudCardActions>
+
+                        </MudCard>
+                    </MudItem>
+                }
+            </MudGrid>
+        }
+
+    </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     FOOTER
+════════════════════════════════════════════════════════ -->
+<footer class="es-footer">
+    <div class="es-footer-inner">
+
+        <MudGrid Spacing="4">
+
+            <!-- Coluna 1: Identidade -->
+            <MudItem xs="12" sm="6" md="4">
+                <div class="es-footer-logo">
+                    <MudIcon Icon="@Icons.Material.Filled.VolunteerActivism"
+                             Style="font-size:1.8rem; color:#81C784; margin-right:8px;" />
+                    <MudText Typo="Typo.h6" Style="color:#FFFFFF; font-weight:700;">
+                        Esperança Solidária
+                    </MudText>
+                </div>
+                <MudText Typo="Typo.body2" Style="color:rgba(255,255,255,0.7); margin-top:0.75rem; line-height:1.7;">
+                    Uma organização dedicada a transformar vidas por meio da solidariedade,
+                    conectando doadores a causas que fazem a diferença.
+                </MudText>
+            </MudItem>
+
+            <!-- Coluna 2: Unidades -->
+            <MudItem xs="12" sm="6" md="4">
+                <MudText Typo="Typo.subtitle1" Style="color:#FFFFFF; font-weight:600; margin-bottom:1rem;">
+                    Nossas Unidades
+                </MudText>
+                @foreach (var unidade in _unidades)
+                {
+                    <div class="es-footer-unidade">
+                        <MudIcon Icon="@Icons.Material.Filled.LocationOn"
+                                 Style="font-size:1rem; color:#81C784; margin-right:6px;" />
+                        <div>
+                            <MudText Typo="Typo.body2" Style="color:#FFFFFF; font-weight:500;">
+                                @unidade.Nome
+                            </MudText>
+                            <MudText Typo="Typo.caption" Style="color:rgba(255,255,255,0.6);">
+                                @unidade.Endereco
+                            </MudText>
+                        </div>
+                    </div>
+                }
+            </MudItem>
+
+            <!-- Coluna 3: Contato -->
+            <MudItem xs="12" sm="12" md="4">
+                <MudText Typo="Typo.subtitle1" Style="color:#FFFFFF; font-weight:600; margin-bottom:1rem;">
+                    Contato
+                </MudText>
+                <div class="es-footer-contato">
+                    <MudIcon Icon="@Icons.Material.Filled.Email" Style="color:#81C784;" />
+                    <MudText Typo="Typo.body2" Style="color:rgba(255,255,255,0.8);">
+                        contato@esperancasolidaria.org.br
+                    </MudText>
+                </div>
+                <div class="es-footer-contato">
+                    <MudIcon Icon="@Icons.Material.Filled.Phone" Style="color:#81C784;" />
+                    <MudText Typo="Typo.body2" Style="color:rgba(255,255,255,0.8);">
+                        (11) 3000-0000
+                    </MudText>
+                </div>
+                <div class="es-footer-contato">
+                    <MudIcon Icon="@Icons.Material.Filled.Groups" Style="color:#81C784;" />
+                    <MudText Typo="Typo.body2" Style="color:rgba(255,255,255,0.8);">
+                        240 colaboradores ativos
+                    </MudText>
+                </div>
+
+                <MudText Typo="Typo.subtitle2" Style="color:#FFFFFF; margin-top:1.5rem; margin-bottom:0.5rem;">
+                    Portal do Doador
+                </MudText>
+                <MudButton Variant="Variant.Outlined"
+                           Size="Size.Small"
+                           Style="color:#81C784; border-color:#81C784; border-radius:20px;"
+                           StartIcon="@Icons.Material.Filled.Login"
+                           OnClick='() => Nav.NavigateTo("/login")'>
+                    Acessar
+                </MudButton>
+            </MudItem>
+
+        </MudGrid>
+
+        <!-- Rodapé inferior -->
+        <MudDivider Style="border-color:rgba(255,255,255,0.15); margin:2rem 0 1.5rem;" />
+        <div class="es-footer-bottom">
+            <MudText Typo="Typo.caption" Style="color:rgba(255,255,255,0.5);">
+                © @DateTime.Now.Year Esperança Solidária — CNPJ 00.000.000/0001-00
+            </MudText>
+            <MudText Typo="Typo.caption" Style="color:rgba(255,255,255,0.4);">
+                Feito com ♥ para quem faz o bem
+            </MudText>
+        </div>
+
+    </div>
+</footer>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     ESTILOS
+════════════════════════════════════════════════════════ -->
+<style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Inter', sans-serif; background: #FAFAFA; }
+
+    /* ── Header ─────────────────────────────── */
+    .es-header {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background: linear-gradient(90deg, #1B5E20 0%, #2E7D32 100%);
+        box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+    }
+    .es-header-inner {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0.9rem 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .es-logo {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        cursor: pointer;
+    }
+    .es-logo-icon {
+        background: rgba(255,255,255,0.15);
+        border-radius: 50%;
+        width: 44px;
+        height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .es-logo-nome {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: #FFFFFF;
+        letter-spacing: -0.5px;
+    }
+    .es-logo-sobrenome {
+        font-size: 1.3rem;
+        font-weight: 400;
+        color: rgba(255,255,255,0.85);
+    }
+
+    /* ── Hero ───────────────────────────────── */
+    .es-hero {
+        position: relative;
+        min-height: 520px;
+        background:
+            url('https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?w=1600&auto=format&fit=crop')
+            center/cover no-repeat;
+        display: flex;
+        align-items: center;
+    }
+    .es-hero-overlay {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(135deg, rgba(27,94,32,0.88) 0%, rgba(46,125,50,0.70) 100%);
+    }
+    .es-hero-content {
+        position: relative;
+        z-index: 1;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 4rem 1.5rem;
+    }
+    .es-hero-titulo {
+        color: #FFFFFF !important;
+        font-size: clamp(2rem, 5vw, 3rem) !important;
+        font-weight: 700 !important;
+        line-height: 1.15 !important;
+        text-shadow: 0 2px 12px rgba(0,0,0,0.2);
+    }
+    .es-hero-subtitulo {
+        color: rgba(255,255,255,0.88) !important;
+        margin-top: 1rem !important;
+        font-size: 1.15rem !important;
+        max-width: 520px;
+    }
+
+    /* ── Impacto ────────────────────────────── */
+    .es-impacto {
+        background: #FFFFFF;
+        padding: 3rem 1.5rem;
+        border-bottom: 1px solid #E8F5E9;
+    }
+    .es-stat {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+    }
+    .es-stat-numero {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #2E7D32;
+        line-height: 1;
+    }
+    .es-stat-label {
+        font-size: 0.85rem;
+        color: #666;
+        text-align: center;
+    }
+
+    /* ── Campanhas ──────────────────────────── */
+    .es-campanhas {
+        background: #F1F8E9;
+        padding: 4rem 1.5rem;
+    }
+    .es-section-inner {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    .es-section-header {
+        text-align: center;
+        margin-bottom: 2.5rem;
+    }
+    .es-section-titulo {
+        color: #1B5E20 !important;
+        font-weight: 700 !important;
+    }
+    .es-section-sub {
+        margin-top: 0.5rem !important;
+        font-size: 1.05rem !important;
+    }
+    .es-loading {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 4rem 0;
+    }
+
+    /* ── Cards ──────────────────────────────── */
+    .es-card {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        border-radius: 16px !important;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        overflow: hidden;
+    }
+    .es-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 32px rgba(46,125,50,0.18) !important;
+    }
+    .es-card-header {
+        background: linear-gradient(135deg, #2E7D32 0%, #388E3C 100%);
+        padding: 1.5rem;
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        min-height: 90px;
+    }
+    .es-card-badge {
+        background: rgba(255,255,255,0.2);
+        color: #FFFFFF;
+        font-size: 0.75rem;
+        font-weight: 600;
+        padding: 4px 10px;
+        border-radius: 20px;
+        white-space: nowrap;
+    }
+    .es-card-body {
+        flex: 1;
+        padding: 1.25rem !important;
+    }
+    .es-card-titulo {
+        font-weight: 700 !important;
+        color: #1B5E20 !important;
+        margin-bottom: 0.5rem !important;
+        line-height: 1.3 !important;
+    }
+    .es-card-descricao {
+        color: #555 !important;
+        line-height: 1.6 !important;
+        margin-bottom: 1rem !important;
+    }
+    .es-progresso-bloco {
+        margin-top: 1rem;
+    }
+    .es-progresso-topo {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: 0.4rem;
+    }
+    .es-arrecadado {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: #2E7D32;
+    }
+    .es-meta {
+        font-size: 0.8rem;
+        color: #888;
+    }
+    .es-progress-bar {
+        margin-bottom: 0.25rem;
+    }
+    .es-card-actions {
+        padding: 0 1.25rem 1.25rem !important;
+    }
+
+    /* ── Footer ─────────────────────────────── */
+    .es-footer {
+        background: linear-gradient(135deg, #1B5E20 0%, #0D3B14 100%);
+        padding: 3.5rem 1.5rem 2rem;
+    }
+    .es-footer-inner {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    .es-footer-logo {
+        display: flex;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+    .es-footer-unidade {
+        display: flex;
+        align-items: flex-start;
+        gap: 6px;
+        margin-bottom: 0.9rem;
+    }
+    .es-footer-contato {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 0.7rem;
+    }
+    .es-footer-bottom {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    /* ── Responsivo ─────────────────────────── */
+    @@media (max-width: 600px) {
+        .es-hero { min-height: 400px; }
+        .es-hero-content { padding: 3rem 1rem; }
+        .es-impacto { padding: 2rem 1rem; }
+        .es-stat-numero { font-size: 1.5rem; }
+        .es-footer-bottom { flex-direction: column; text-align: center; }
+    }
+</style>
+
+@code {
+    private List<CampanhaPublicaResponse> _campanhas = new();
+    private bool _carregando = true;
+
+    private static readonly System.Globalization.CultureInfo _culturaBR =
+        new("pt-BR");
+
+    private readonly List<(string Nome, string Endereco)> _unidades = new()
+    {
+        ("Unidade Centro",    "Rua da Solidariedade, 100 — São Paulo, SP"),
+        ("Unidade Zona Sul",  "Av. do Bem, 250 — Santo André, SP"),
+        ("Unidade Zona Norte","Rua da Esperança, 80 — Guarulhos, SP"),
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        _carregando = true;
+        _campanhas  = await CampanhaService.ObterCampanhasAtivasAsync();
+        _carregando = false;
+    }
+
+    private void RolarParaCampanhas()
+    {
+        // JS interop simplificado — scroll suave para a seção de campanhas
+        Nav.NavigateTo("/#campanhas", forceLoad: false);
+    }
+
+    private void IrParaDoacao(Guid guidCampanha)
+    {
+        // Redireciona para o login passando a campanha como returnUrl
+        // Após login, o portal mostrará o formulário de doação para essa campanha
+        Nav.NavigateTo($"/login?returnUrl=/doacoes/nova?campanha={guidCampanha}");
+    }
+
+    private static string TruncaDescricao(string texto, int limite) =>
+        texto.Length <= limite ? texto : texto[..limite].TrimEnd() + "...";
+}

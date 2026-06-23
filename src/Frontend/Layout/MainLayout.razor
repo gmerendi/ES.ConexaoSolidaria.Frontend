@@ -1,0 +1,60 @@
+@inherits LayoutComponentBase
+@inject AuthService AuthSvc
+@inject NavigationManager Nav
+@inject JwtAuthStateProvider AuthProvider
+
+<MudThemeProvider Theme="@_tema" />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<MudLayout>
+    <MudAppBar Elevation="1" Color="Color.Primary">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu"
+                       Color="Color.Inherit"
+                       Edge="Edge.Start"
+                       OnClick="@(() => _drawerAberto = !_drawerAberto)" />
+
+        <MudText Typo="Typo.h6" Class="ml-2">Conexão Solidária</MudText>
+
+        <MudSpacer />
+
+        <AuthorizeView>
+            <Authorized>
+                <MudText Typo="Typo.body2" Class="mr-2">@context.User.Identity!.Name</MudText>
+                <MudIconButton Icon="@Icons.Material.Filled.Logout"
+                               Color="Color.Inherit"
+                               Title="Sair"
+                               OnClick="LogoutAsync" />
+            </Authorized>
+        </AuthorizeView>
+    </MudAppBar>
+
+    <MudDrawer @bind-Open="_drawerAberto" Elevation="2" ClipMode="DrawerClipMode.Always">
+        <NavMenu />
+    </MudDrawer>
+
+    <MudMainContent Class="pt-4 px-4">
+        @Body
+    </MudMainContent>
+</MudLayout>
+
+@code {
+    private bool _drawerAberto = true;
+
+    private readonly MudTheme _tema = new()
+    {
+        PaletteLight = new PaletteLight
+        {
+            Primary    = "#1B5E20",   // verde escuro — identidade visual solidária
+            Secondary  = "#FFA000",   // âmbar
+            AppbarBackground = "#1B5E20",
+        }
+    };
+
+    private async Task LogoutAsync()
+    {
+        await AuthSvc.LogoutAsync();
+        AuthProvider.NotificarMudancaEstado();
+        Nav.NavigateTo("/login", forceLoad: false);
+    }
+}

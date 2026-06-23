@@ -1,0 +1,26 @@
+﻿<CascadingAuthenticationState>
+    <Router AppAssembly="@typeof(App).Assembly">
+        <Found Context="routeData">
+            <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(Frontend.Layout.MainLayout)">
+                <NotAuthorized Context="authCtx">
+                    @if (!authCtx.User.Identity!.IsAuthenticated)
+                    {
+                        <RedirectToLogin />
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.h6" Class="pa-4">
+                            Voce nao tem permissao para acessar esta pagina.
+                        </MudText>
+                    }
+                </NotAuthorized>
+            </AuthorizeRouteView>
+        </Found>
+        <NotFound>
+            <PageTitle>Pagina nao encontrada</PageTitle>
+            <LayoutView Layout="@typeof(Frontend.Layout.LandingLayout)">
+                <MudText Typo="Typo.h5" Class="pa-4">Pagina nao encontrada.</MudText>
+            </LayoutView>
+        </NotFound>
+    </Router>
+</CascadingAuthenticationState>

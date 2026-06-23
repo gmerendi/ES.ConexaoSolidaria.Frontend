@@ -1,0 +1,50 @@
+@page "/portal"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+<PageTitle>Portal — Esperanca Solidaria</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Bem-vindo ao Portal do Doador</MudText>
+
+<AuthorizeView>
+    <Authorized>
+        <MudGrid>
+            <MudItem xs="12" sm="6" md="4">
+                <MudCard Elevation="2">
+                    <MudCardHeader>
+                        <CardHeaderAvatar>
+                            <MudIcon Icon="@Icons.Material.Filled.Campaign" Color="Color.Primary" />
+                        </CardHeaderAvatar>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.h6">Campanhas</MudText>
+                            <MudText Typo="Typo.body2">Veja as campanhas ativas</MudText>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardActions>
+                        <MudButton Variant="Variant.Text" Color="Color.Primary" Href="/campanhas">
+                            Acessar
+                        </MudButton>
+                    </MudCardActions>
+                </MudCard>
+            </MudItem>
+
+            <MudItem xs="12" sm="6" md="4">
+                <MudCard Elevation="2">
+                    <MudCardHeader>
+                        <CardHeaderAvatar>
+                            <MudIcon Icon="@Icons.Material.Filled.Favorite" Color="Color.Secondary" />
+                        </CardHeaderAvatar>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.h6">Minhas Doacoes</MudText>
+                            <MudText Typo="Typo.body2">Acompanhe suas contribuicoes</MudText>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardActions>
+                        <MudButton Variant="Variant.Text" Color="Color.Secondary" Href="/doacoes">
+                            Acessar
+                        </MudButton>
+                    </MudCardActions>
+                </MudCard>
+            </MudItem>
+        </MudGrid>
+    </Authorized>
+</AuthorizeView>
