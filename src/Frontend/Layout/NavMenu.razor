@@ -1,0 +1,27 @@
+<MudNavMenu>
+    <AuthorizeView>
+        <Authorized>
+            <MudNavLink Href="/portal" Match="NavLinkMatch.All"
+                        Icon="@Icons.Material.Filled.Dashboard">
+                Inicio
+            </MudNavLink>
+
+            <MudNavLink Href="/campanhas"
+                        Icon="@Icons.Material.Filled.Campaign">
+                Campanhas
+            </MudNavLink>
+
+            <MudNavLink Href="/doacoes"
+                        Icon="@Icons.Material.Filled.Favorite">
+                Minhas Doacoes
+            </MudNavLink>
+
+            <AuthorizeView Roles="GESTOR_ONG" Context="gestorCtx">
+                <MudNavLink Href="/doacoes/campanha"
+                            Icon="@Icons.Material.Filled.BarChart">
+                    Doacoes por Campanha
+                </MudNavLink>
+            </AuthorizeView>
+        </Authorized>
+    </AuthorizeView>
+</MudNavMenu>

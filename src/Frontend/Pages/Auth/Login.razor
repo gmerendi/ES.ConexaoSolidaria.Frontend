@@ -1,0 +1,167 @@
+@page "/login"
+@layout EmptyLayout
+@inject AuthService AuthSvc
+@inject JwtAuthStateProvider AuthProvider
+@inject NavigationManager Nav
+
+<PageTitle>Login — Esperanca Solidaria</PageTitle>
+
+<MudThemeProvider Theme="@_tema" />
+
+<div class="login-container">
+    <MudPaper Class="login-card pa-8" Elevation="4">
+
+        <!-- Cabecalho -->
+        <div class="login-header">
+            <MudIcon Icon="@Icons.Material.Filled.VolunteerActivism"
+                     Color="Color.Primary"
+                     Style="font-size:3rem;" />
+            <MudText Typo="Typo.h5" Color="Color.Primary" Class="mt-2 mb-0" Style="font-weight:700;">
+                Esperanca Solidaria
+            </MudText>
+            <MudText Typo="Typo.body2" Style="color:#888; margin-top:4px;">
+                Portal do Doador
+            </MudText>
+        </div>
+
+        <!-- Alerta de erro -->
+        @if (!string.IsNullOrEmpty(_erro))
+        {
+            <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true">@_erro</MudAlert>
+        }
+
+        <!-- Formulario -->
+        <MudForm @ref="_form" @bind-IsValid="_formValido">
+
+            <MudTextField @bind-Value="_email"
+                          Label="E-mail"
+                          Variant="Variant.Outlined"
+                          InputType="InputType.Email"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Email"
+                          Required="true"
+                          RequiredError="E-mail e obrigatorio."
+                          Class="mb-3"
+                          Disabled="@_carregando" />
+
+            <MudTextField @bind-Value="_senha"
+                          Label="Senha"
+                          Variant="Variant.Outlined"
+                          InputType="@(_senhaVisivel ? InputType.Text : InputType.Password)"
+                          Adornment="Adornment.End"
+                          AdornmentIcon="@(_senhaVisivel
+                              ? Icons.Material.Filled.VisibilityOff
+                              : Icons.Material.Filled.Visibility)"
+                          OnAdornmentClick="@(() => _senhaVisivel = !_senhaVisivel)"
+                          Required="true"
+                          RequiredError="Senha e obrigatoria."
+                          Class="mb-4"
+                          Disabled="@_carregando" />
+
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       FullWidth="true"
+                       Size="Size.Large"
+                       OnClick="EntrarAsync"
+                       Style="border-radius:24px; font-weight:600;"
+                       Disabled="@_carregando">
+                @if (_carregando)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                    <span>Entrando...</span>
+                }
+                else
+                {
+                    <span>Entrar</span>
+                }
+            </MudButton>
+
+        </MudForm>
+
+        <MudDivider Class="my-4" />
+
+        <div class="text-center">
+            <MudButton Variant="Variant.Text"
+                       Color="Color.Default"
+                       StartIcon="@Icons.Material.Filled.ArrowBack"
+                       OnClick='() => Nav.NavigateTo("/")'>
+                Voltar ao site
+            </MudButton>
+        </div>
+
+    </MudPaper>
+</div>
+
+<style>
+    .login-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        background: linear-gradient(135deg, #1B5E20 0%, #2E7D32 50%, #81C784 100%);
+        padding: 1rem;
+    }
+    .login-card {
+        width: 100%;
+        max-width: 420px;
+        border-radius: 20px;
+    }
+    .login-header {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+</style>
+
+@code {
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
+
+    private MudForm   _form       = default!;
+    private string    _email      = string.Empty;
+    private string    _senha      = string.Empty;
+    private bool      _formValido;
+    private bool      _carregando;
+    private bool      _senhaVisivel;
+    private string?   _erro;
+
+    private readonly MudTheme _tema = new()
+    {
+        PaletteLight = new PaletteLight
+        {
+            Primary   = "#2E7D32",
+            Secondary = "#FF6F00",
+        }
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (await AuthSvc.EstaLogadoAsync())
+            Nav.NavigateTo(ReturnUrl ?? "/portal", forceLoad: false);
+    }
+
+    private async Task EntrarAsync()
+    {
+        await _form.Validate();
+        if (!_formValido) return;
+
+        _carregando = true;
+        _erro       = null;
+
+        var (sucesso, erro) = await AuthSvc.LoginAsync(new LoginRequest(_email, _senha));
+
+        if (sucesso)
+        {
+            AuthProvider.NotificarMudancaEstado();
+            Nav.NavigateTo(ReturnUrl ?? "/portal", forceLoad: false);
+        }
+        else
+        {
+            _erro = erro;
+        }
+
+        _carregando = false;
+    }
+}
