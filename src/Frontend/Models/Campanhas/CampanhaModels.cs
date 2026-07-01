@@ -6,7 +6,7 @@ public record CampanhaPublicaResponse(
     string Descricao,
     decimal MetaFinanceira,
     decimal ValorArrecadado,
-    string DataInicio,   
+    string DataInicio,
     string DataFim,
     string StatusCampanha
 )
@@ -32,3 +32,32 @@ public record ObterTodasCampanhasResponse(
     int TotalPaginas,
     int PaginaAtual
 );
+
+// ═══ Admin ═══
+
+public record CriarCampanhaRequest(
+    string Titulo,
+    string Descricao,
+    decimal MetaFinanceira,
+    DateTime DataInicio,
+    DateTime DataFim);
+
+public record AlterarCampanhaRequest(
+    Guid Guid,
+    string Titulo,
+    string Descricao,
+    decimal MetaFinanceira,
+    DateTime DataInicio,
+    DateTime DataFim);
+
+public record CampanhaAdminDto(
+    Guid Guid,
+    string Titulo,
+    string Descricao,
+    decimal MetaFinanceira,
+    decimal ValorArrecadado,
+    string DataInicio,
+    string DataFim,
+    string StatusCampanha);
+
+public record BuscaCampanhaValue(IEnumerable<CampanhaAdminDto> Campanhas);

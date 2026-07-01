@@ -37,6 +37,9 @@ builder.Services.AddScoped<JwtAuthStateProvider>();
 
 // ── Servicos ──────────────────────────────────────────────────────────────────
 builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<UsuarioService>();
 builder.Services.AddScoped<CampanhaPublicaService>();
+builder.Services.AddScoped<CampanhaAdminService>();
+builder.Services.AddScoped<DoacaoService>();
 
 await builder.Build().RunAsync();

@@ -1,0 +1,12 @@
+﻿@* Linha de label + valor usada no card de visualização de dados do usuário. *@
+
+<div style="display:flex; justify-content:space-between; align-items:baseline;">
+    <MudText Typo="Typo.caption" Style="color:#888; min-width:60px;">@Label</MudText>
+    <MudText Typo="Typo.body2" Style="@($"font-weight:600; text-align:right; color:{CorValor}")">@Valor</MudText>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Label { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Valor { get; set; } = string.Empty;
+    [Parameter] public string CorValor { get; set; } = "#222";
+}

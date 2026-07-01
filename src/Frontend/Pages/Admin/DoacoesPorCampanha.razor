@@ -1,0 +1,285 @@
+﻿@page "/doacoes/campanha"
+@attribute [Authorize(Roles = "GESTOR_ONG")]
+@inject CampanhaAdminService CampanhaAdminSvc
+@inject DoacaoService DoacaoSvc
+
+<PageTitle>Doações por Campanha — Conexão Solidária</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">Doações por Campanha</MudText>
+<MudText Typo="Typo.body2" Class="mb-5" Style="color:#666;">
+    Busque uma campanha e visualize todas as doações recebidas.
+</MudText>
+
+<MudGrid Spacing="4">
+
+    <!-- ═══════ Coluna esquerda — busca de campanha ═══════ -->
+    <MudItem xs="12" md="4">
+        <MudPaper Class="pa-6" Elevation="2" Style="border-radius:16px;">
+
+            <MudText Typo="Typo.h6" Class="mb-3" Style="font-weight:700; color:#1B5E20;">
+                <MudIcon Icon="@Icons.Material.Filled.Search" Class="mr-1" Style="vertical-align:middle;" />
+                Buscar Campanha
+            </MudText>
+
+            <MudStack Row="true" AlignItems="AlignItems.End" Spacing="2" Class="mb-3">
+                <MudTextField @bind-Value="_termoBusca"
+                              Label="Termo"
+                              Variant="Variant.Outlined"
+                              Style="flex:1;"
+                              Disabled="@_buscando"
+                              @onkeyup="BuscarSeEnter" />
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           Style="border-radius:24px; height:56px; min-width:80px; font-weight:600;"
+                           OnClick="BuscarAsync"
+                           Disabled="@(string.IsNullOrWhiteSpace(_termoBusca) || _buscando)">
+                    @if (_buscando)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                    }
+                    else
+                    {
+
+                        <span>Buscar</span>
+                    }
+                </MudButton>
+            </MudStack>
+
+            @if (_errosBusca.Count > 0)
+            {
+                <MudAlert Severity="Severity.Error" Dense="true" Class="mb-3">
+                    @foreach (var e in _errosBusca)
+                    {
+                        <div>@e</div>
+                    }
+                </MudAlert>
+            }
+
+            @if (_campanhas.Any())
+            {
+                <MudText Typo="Typo.caption" Class="mb-1" Style="color:#888;">
+                    @_campanhas.Count resultado(s)
+                </MudText>
+
+                <div style="max-height:360px; overflow-y:auto; border-radius:8px; border:1px solid #E0E0E0;">
+                    @foreach (var c in _campanhas)
+                    {
+                        var ativa = c.Guid == _campanhaSelecionada?.Guid;
+                        <div @onclick="@(() => SelecionarCampanhaAsync(c))"
+                             style="padding:12px 16px; cursor:pointer; border-bottom:1px solid #F0F0F0;
+                            background:@(ativa ? "#E8F5E9" : "white");">
+                            <MudText Typo="Typo.body1"
+                                     Style="@($"font-weight:600; color:{(ativa ? "#1B5E20" : "#222")}")">
+                                @c.Titulo
+                            </MudText>
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="mt-1">
+                                <MudText Typo="Typo.caption" Style="color:#888;">@c.DataInicio → @c.DataFim</MudText>
+                                <MudChip T="string" Size="Size.Small"
+                                         Color="@(c.StatusCampanha == "ATIVA" ? Color.Success : Color.Default)">
+                                    @c.StatusCampanha
+                                </MudChip>
+                            </MudStack>
+                        </div>
+                    }
+                </div>
+            }
+            else if (_buscaRealizada)
+            {
+                <MudAlert Severity="Severity.Info" Dense="true">
+                    Nenhuma campanha encontrada.
+                </MudAlert>
+            }
+
+        </MudPaper>
+    </MudItem>
+
+    <!-- ═══════ Coluna direita — doações da campanha ═══════ -->
+    <MudItem xs="12" md="8">
+        <MudPaper Class="pa-6" Elevation="2" Style="border-radius:16px; min-height:300px;">
+
+            @if (_campanhaSelecionada is null)
+            {
+                <div style="text-align:center; padding:3rem 0; color:#bbb;">
+                    <MudIcon Icon="@Icons.Material.Filled.Favorite" Style="font-size:3rem;" />
+                    <MudText Typo="Typo.body2" Class="mt-2">
+                        Selecione uma campanha para ver as doações.
+                    </MudText>
+                </div>
+            }
+            else
+            {
+                <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:1rem;">
+                    <div>
+                        <MudText Typo="Typo.h6" Style="font-weight:700; color:#1B5E20;">
+                            @_campanhaSelecionada.Titulo
+                        </MudText>
+                        <MudText Typo="Typo.caption" Style="color:#888;">
+                            @_doacoes.Count doação(ões) •
+                            Total: R$ @_doacoes.Sum(d => d.ValorDoacao).ToString("N2", _culturaBR)
+                        </MudText>
+                    </div>
+                    @if (_carregandoDoacoes)
+                    {
+                        <MudProgressCircular Size="Size.Small" Color="Color.Primary" Indeterminate="true" />
+                    }
+                </div>
+
+                @if (_errosDoacoes.Count > 0)
+                {
+                    <MudAlert Severity="Severity.Error" Dense="true" Class="mb-3">
+                        @foreach (var e in _errosDoacoes)
+                        {
+                            <div>@e</div>
+                        }
+                    </MudAlert>
+                }
+                else if (!_doacoes.Any() && !_carregandoDoacoes)
+                {
+                    <MudAlert Severity="Severity.Info" Dense="true">
+                        Nenhuma doação registrada para esta campanha.
+                    </MudAlert>
+                }
+                else
+                {
+                    <div style="max-height:460px; overflow-y:auto; border-radius:8px; border:1px solid #E0E0E0;">
+                        @foreach (var d in _doacoes)
+                        {
+                            <div @onclick="@(() => AbrirDetalheDoacao(d))"
+                                 class="doacao-row"
+                                 style="padding:12px 16px; cursor:pointer; border-bottom:1px solid #F0F0F0;
+                                display:flex; justify-content:space-between; align-items:center;">
+                                <div>
+                                    <MudText Typo="Typo.body2" Style="font-weight:600;">@d.EmailUsuario</MudText>
+                                    <MudText Typo="Typo.caption" Style="color:#888;">@d.DataDoacao</MudText>
+                                </div>
+                                <MudText Typo="Typo.body1" Style="font-weight:700; color:#2E7D32;">
+                                    R$ @d.ValorDoacao.ToString("N2", _culturaBR)
+                                </MudText>
+                            </div>
+                        }
+                    </div>
+                }
+            }
+        </MudPaper>
+    </MudItem>
+
+</MudGrid>
+
+<!-- ═══════ Modal — Detalhes da Doação ═══════ -->
+<MudDialog @bind-Visible="_modalDoacaoAberto"
+           Options="@(new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, CloseOnEscapeKey = true })">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Favorite" Class="mr-2" Style="vertical-align:middle; color:#2E7D32;" />
+            Detalhes da Doação
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (_doacaoDetalhada is not null)
+        {
+            var d = _doacaoDetalhada;
+            <MudStack Spacing="3">
+                <MudDivider />
+
+                <MudText Typo="Typo.overline" Style="color:#888; font-weight:600;">Campanha</MudText>
+                <DadosUsuarioRow Label="Título" Valor="@d.TituloCampanha" />
+                <DadosUsuarioRow Label="GUID" Valor="@d.GuidCampanha.ToString()" />
+
+                <MudDivider />
+
+                <MudText Typo="Typo.overline" Style="color:#888; font-weight:600;">Doador</MudText>
+                <DadosUsuarioRow Label="Nome" Valor="@d.NomeUsuario" />
+                <DadosUsuarioRow Label="E-mail" Valor="@d.EmailUsuario" />
+                <DadosUsuarioRow Label="CPF" Valor="@d.CpfUsuario" />
+                <DadosUsuarioRow Label="GUID" Valor="@d.GuidUsuario.ToString()" />
+
+                <MudDivider />
+
+                <MudText Typo="Typo.overline" Style="color:#888; font-weight:600;">Doação</MudText>
+                <DadosUsuarioRow Label="Valor" Valor="@($"R$ {d.ValorDoacao.ToString("N2")}")"
+                                 CorValor="#2E7D32" />
+                <DadosUsuarioRow Label="Data" Valor="@d.DataDoacao" />
+            </MudStack>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   Style="border-radius:24px;"
+                   OnClick="@(() => _modalDoacaoAberto = false)">
+            Fechar
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+<style>
+    .doacao-row:hover {
+        background: #F5F5F5;
+    }
+</style>
+
+@code {
+    // ═══ Busca de campanha ═══
+    private string _termoBusca = string.Empty;
+    private bool _buscando;
+    private bool _buscaRealizada;
+    private List<CampanhaAdminDto> _campanhas = new();
+    private List<string> _errosBusca = new();
+    private CampanhaAdminDto? _campanhaSelecionada;
+
+    // ═══ Doações da campanha ═══
+    private List<DoacaoCampanhaDto> _doacoes = new();
+    private bool _carregandoDoacoes;
+    private List<string> _errosDoacoes = new();
+
+    // ═══ Modal de detalhe ═══
+    private bool _modalDoacaoAberto;
+    private DoacaoCampanhaDto? _doacaoDetalhada;
+
+    private static readonly System.Globalization.CultureInfo _culturaBR = new("pt-BR");
+
+    private async Task BuscarAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_termoBusca)) return;
+
+        _buscando = true;
+        _buscaRealizada = false;
+        _campanhas = new();
+        _errosBusca = new();
+        _doacoes = new();
+        _campanhaSelecionada = null;
+
+        var (sucesso, campanhas, erros) = await CampanhaAdminSvc.BuscarAsync(_termoBusca.Trim());
+
+        _buscaRealizada = true;
+        if (sucesso) _campanhas = campanhas;
+        else _errosBusca = erros;
+
+        _buscando = false;
+    }
+
+    private async Task BuscarSeEnter(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await BuscarAsync();
+    }
+
+    private async Task SelecionarCampanhaAsync(CampanhaAdminDto campanha)
+    {
+        _campanhaSelecionada = campanha;
+        _doacoes = new();
+        _errosDoacoes = new();
+        _carregandoDoacoes = true;
+
+        var (sucesso, doacoes, erros) = await DoacaoSvc.ObterPorCampanhaAsync(campanha.Guid);
+
+        if (sucesso) _doacoes = doacoes;
+        else _errosDoacoes = erros;
+
+        _carregandoDoacoes = false;
+    }
+
+    private void AbrirDetalheDoacao(DoacaoCampanhaDto doacao)
+    {
+        _doacaoDetalhada = doacao;
+        _modalDoacaoAberto = true;
+    }
+}

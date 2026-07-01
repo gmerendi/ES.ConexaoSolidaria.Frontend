@@ -4,6 +4,7 @@
 @inject JwtAuthStateProvider AuthProvider
 
 <MudThemeProvider Theme="@_tema" />
+<MudPopoverProvider />
 <MudDialogProvider />
 <MudSnackbarProvider />
 
@@ -20,7 +21,9 @@
 
         <AuthorizeView>
             <Authorized>
-                <MudText Typo="Typo.body2" Class="mr-2">@context.User.Identity!.Name</MudText>
+                <MudText Typo="Typo.body2" Class="mr-2">
+                    @context.User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value
+                </MudText>
                 <MudIconButton Icon="@Icons.Material.Filled.Logout"
                                Color="Color.Inherit"
                                Title="Sair"
@@ -33,7 +36,7 @@
         <NavMenu />
     </MudDrawer>
 
-    <MudMainContent Class="pt-4 px-4">
+    <MudMainContent Class="pt-18 px-6">
         @Body
     </MudMainContent>
 </MudLayout>
@@ -45,8 +48,8 @@
     {
         PaletteLight = new PaletteLight
         {
-            Primary    = "#1B5E20",   // verde escuro — identidade visual solidária
-            Secondary  = "#FFA000",   // âmbar
+            Primary = "#1B5E20",   // verde escuro — identidade visual solidária
+            Secondary = "#FFA000",   // âmbar
             AppbarBackground = "#1B5E20",
         }
     };
@@ -55,6 +58,6 @@
     {
         await AuthSvc.LogoutAsync();
         AuthProvider.NotificarMudancaEstado();
-        Nav.NavigateTo("/login", forceLoad: false);
+        Nav.NavigateTo("/login", forceLoad: true);
     }
 }

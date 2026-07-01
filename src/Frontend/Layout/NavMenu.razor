@@ -11,16 +11,43 @@
                 Campanhas
             </MudNavLink>
 
+            <MudNavLink Href="/perfil"
+                        Icon="@Icons.Material.Filled.Person">
+                Perfil
+            </MudNavLink>
+
             <MudNavLink Href="/doacoes"
                         Icon="@Icons.Material.Filled.Favorite">
                 Minhas Doacoes
             </MudNavLink>
 
             <AuthorizeView Roles="GESTOR_ONG" Context="gestorCtx">
+
+                <MudDivider Class="my-2" />
+                <MudText Typo="Typo.caption" Class="px-4 pb-1" Style="color:#888; font-weight:600; text-transform:uppercase; letter-spacing:0.08em;">
+                    Administração
+                </MudText>
+
+                <MudNavLink Href="/admin/usuarios"
+                            Icon="@Icons.Material.Filled.ManageAccounts">
+                    Usuários
+                </MudNavLink>
+
+                <MudNavLink Href="/admin/campanhas"
+                            Icon="@Icons.Material.Filled.Campaign">
+                    Campanhas
+                </MudNavLink>
+
                 <MudNavLink Href="/doacoes/campanha"
                             Icon="@Icons.Material.Filled.BarChart">
                     Doacoes por Campanha
                 </MudNavLink>
+
+                <MudNavLink Href="/doacoes/usuario"
+                            Icon="@Icons.Material.Filled.PersonSearch">
+                    Doacoes por Usuario
+                </MudNavLink>
+
             </AuthorizeView>
         </Authorized>
     </AuthorizeView>

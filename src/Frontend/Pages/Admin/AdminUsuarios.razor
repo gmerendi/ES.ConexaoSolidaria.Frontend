@@ -1,0 +1,292 @@
+﻿@page "/admin/usuarios"
+@attribute [Authorize(Roles = "GESTOR_ONG")]
+@inject UsuarioService UsuarioSvc
+
+<PageTitle>Administração de Usuários — Conexão Solidária</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">Administração de Usuários</MudText>
+<MudText Typo="Typo.body2" Class="mb-4" Style="color:#666;">
+    Informe o e-mail do usuário e gerencie seus dados, status e perfil.
+</MudText>
+
+<!-- ═══════ Campo de e-mail único ═══════ -->
+<MudPaper Class="pa-5 mb-5" Elevation="2" Style="border-radius:16px;">
+    <MudStack Row="true" AlignItems="AlignItems.End" Spacing="3">
+        <MudTextField @bind-Value="_email"
+                      Label="E-mail do usuário"
+                      Variant="Variant.Outlined"
+                      InputType="InputType.Email"
+                      Adornment="Adornment.Start"
+                      AdornmentIcon="@Icons.Material.Filled.Email"
+                      Style="flex:1;"
+                      Disabled="@_carregandoQualquer" />
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   Size="Size.Large"
+                   Style="border-radius:24px; font-weight:600; height:56px; min-width:120px;"
+                   StartIcon="@Icons.Material.Filled.Search"
+                   OnClick="BuscarAsync"
+                   Disabled="@(string.IsNullOrWhiteSpace(_email) || _carregandoQualquer)">
+            @if (_carregandoBusca)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                <span>Buscando...</span>
+            }
+            else
+            {
+
+                <span>Buscar</span>
+            }
+        </MudButton>
+    </MudStack>
+
+    <!-- Dados do usuário encontrado -->
+    @if (_errosBusca.Count > 0)
+    {
+        <MudAlert Severity="Severity.Error" Dense="true" Class="mt-4">
+            @foreach (var e in _errosBusca)
+            {
+                <div>@e</div>
+            }
+        </MudAlert>
+    }
+
+    @if (_usuario is not null)
+    {
+        <MudDivider Class="mt-4 mb-3" />
+        <MudGrid Spacing="2">
+            <MudItem xs="12" sm="6" md="4">
+                <DadosUsuarioRow Label="Nome" Valor="@_usuario.NomeCompleto" />
+            </MudItem>
+            <MudItem xs="12" sm="6" md="4">
+                <DadosUsuarioRow Label="E-mail" Valor="@_usuario.Email" />
+            </MudItem>
+            <MudItem xs="12" sm="6" md="4">
+                <DadosUsuarioRow Label="CPF" Valor="@_usuario.Cpf" />
+            </MudItem>
+            <MudItem xs="12" sm="6" md="4">
+                <DadosUsuarioRow Label="Perfil" Valor="@_usuario.Perfil" />
+            </MudItem>
+            <MudItem xs="12" sm="6" md="4">
+                <DadosUsuarioRow Label="Status" Valor="@_usuario.Status"
+                                 CorValor="@(_usuario.Status == "ACTIVE" ? "#2E7D32" : "#C62828")" />
+            </MudItem>
+        </MudGrid>
+    }
+</MudPaper>
+
+<!-- Operações — só aparecem após encontrar o usuário -->
+@if (_usuario is not null)
+{
+    <MudGrid Spacing="4">
+
+        <!-- ═══════ Card 1 — Suspender / Ativar ═══════ -->
+        <MudItem xs="12" md="6">
+            <MudPaper Class="pa-6" Elevation="2" Style="border-radius:16px; height:100%;">
+                <div style="display:flex; align-items:center; gap:12px; margin-bottom:.75rem;">
+                    <MudIcon Icon="@Icons.Material.Filled.AdminPanelSettings" Color="Color.Warning" Style="font-size:2rem;" />
+                    <MudText Typo="Typo.h6" Style="font-weight:700; color:#1B5E20;">Status do Usuário</MudText>
+                </div>
+                <MudText Typo="Typo.body2" Class="mb-4" Style="color:#666;">
+                    Suspenda ou reative o acesso deste usuário à plataforma.
+                </MudText>
+
+                @if (_mensagemStatus is not null)
+                {
+                    <MudAlert Severity="@_severidadeStatus" Dense="true" Class="mb-4">
+                        @_mensagemStatus
+                    </MudAlert>
+                }
+
+                <MudStack Row="true" Spacing="2">
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Error"
+                               Style="border-radius:24px; font-weight:600; flex:1;"
+                               StartIcon="@Icons.Material.Filled.Block"
+                               OnClick="SuspenderAsync"
+                               Disabled="@(_carregandoStatus || _usuario.Status == "SUSPENDED")">
+                        @if (_carregandoStatus && _acaoStatus == "suspender")
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-1" />
+                        }
+                        Suspender
+                    </MudButton>
+
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Success"
+                               Style="border-radius:24px; font-weight:600; flex:1;"
+                               StartIcon="@Icons.Material.Filled.CheckCircle"
+                               OnClick="AtivarAsync"
+                               Disabled="@(_carregandoStatus || _usuario.Status == "ACTIVE")">
+                        @if (_carregandoStatus && _acaoStatus == "ativar")
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-1" />
+                        }
+                        Ativar
+                    </MudButton>
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+
+        <!-- ═══════ Card 2 — Alterar Perfil ═══════ -->
+        <MudItem xs="12" md="6">
+            <MudPaper Class="pa-6" Elevation="2" Style="border-radius:16px; height:100%;">
+                <div style="display:flex; align-items:center; gap:12px; margin-bottom:.75rem;">
+                    <MudIcon Icon="@Icons.Material.Filled.SwitchAccount" Color="Color.Secondary" Style="font-size:2rem;" />
+                    <MudText Typo="Typo.h6" Style="font-weight:700; color:#1B5E20;">Alterar Perfil</MudText>
+                </div>
+                <MudText Typo="Typo.body2" Class="mb-4" Style="color:#666;">
+                    Promova a gestor da ONG ou rebaixe a doador.
+                </MudText>
+
+                @if (_mensagemPerfil is not null)
+                {
+                    <MudAlert Severity="@_severidadePerfil" Dense="true" Class="mb-4">
+                        @_mensagemPerfil
+                    </MudAlert>
+                }
+
+                <MudStack Row="true" Spacing="2">
+                    <MudButton Variant="Variant.Outlined"
+                               Color="Color.Primary"
+                               Style="border-radius:24px; font-weight:600; flex:1;"
+                               StartIcon="@Icons.Material.Filled.Favorite"
+                               OnClick="AlterarParaDoadorAsync"
+                               Disabled="@(_carregandoPerfil || _usuario.Perfil == "DOADOR")">
+                        @if (_carregandoPerfil && _acaoPerfil == "doador")
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-1" />
+                        }
+                        → Doador
+                    </MudButton>
+
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               Style="border-radius:24px; font-weight:600; flex:1;"
+                               StartIcon="@Icons.Material.Filled.AdminPanelSettings"
+                               OnClick="AlterarParaGestorAsync"
+                               Disabled="@(_carregandoPerfil || _usuario.Perfil == "GESTOR_ONG")">
+                        @if (_carregandoPerfil && _acaoPerfil == "gestor")
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-1" />
+                        }
+                        → Gestor
+                    </MudButton>
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+
+    </MudGrid>
+}
+
+@code {
+    private string _email = string.Empty;
+    private UsuarioDto? _usuario;
+
+    // Busca
+    private bool _carregandoBusca;
+    private List<string> _errosBusca = new();
+
+    // Status
+    private bool _carregandoStatus;
+    private string? _acaoStatus;
+    private string? _mensagemStatus;
+    private Severity _severidadeStatus = Severity.Success;
+
+    // Perfil
+    private bool _carregandoPerfil;
+    private string? _acaoPerfil;
+    private string? _mensagemPerfil;
+    private Severity _severidadePerfil = Severity.Success;
+
+    private bool _carregandoQualquer => _carregandoBusca || _carregandoStatus || _carregandoPerfil;
+
+    private async Task BuscarAsync()
+    {
+        _carregandoBusca = true;
+        _usuario = null;
+        _errosBusca = new();
+        _mensagemStatus = null;
+        _mensagemPerfil = null;
+
+        var (sucesso, usuario, erros) = await UsuarioSvc.ObterPorEmailAsync(_email.Trim());
+
+        if (sucesso) _usuario = usuario;
+        else _errosBusca = erros;
+
+        _carregandoBusca = false;
+    }
+
+    private async Task SuspenderAsync()
+    {
+        _acaoStatus = "suspender";
+        _carregandoStatus = true;
+        _mensagemStatus = null;
+
+        var (sucesso, mensagens) = await UsuarioSvc.SuspenderAsync(_email.Trim());
+
+        _mensagemStatus = mensagens.FirstOrDefault();
+        _severidadeStatus = sucesso ? Severity.Success : Severity.Error;
+
+        // Atualiza o status exibido localmente sem precisar buscar de novo
+        if (sucesso && _usuario is not null)
+            _usuario = _usuario with { Status = "SUSPENDED" };
+
+        _carregandoStatus = false;
+        _acaoStatus = null;
+    }
+
+    private async Task AtivarAsync()
+    {
+        _acaoStatus = "ativar";
+        _carregandoStatus = true;
+        _mensagemStatus = null;
+
+        var (sucesso, mensagens) = await UsuarioSvc.AtivarAsync(_email.Trim());
+
+        _mensagemStatus = mensagens.FirstOrDefault();
+        _severidadeStatus = sucesso ? Severity.Success : Severity.Error;
+
+        if (sucesso && _usuario is not null)
+            _usuario = _usuario with { Status = "ACTIVE" };
+
+        _carregandoStatus = false;
+        _acaoStatus = null;
+    }
+
+    private async Task AlterarParaDoadorAsync()
+    {
+        _acaoPerfil = "doador";
+        _carregandoPerfil = true;
+        _mensagemPerfil = null;
+
+        var (sucesso, mensagens) = await UsuarioSvc.AlterarParaDoadorAsync(_email.Trim());
+
+        _mensagemPerfil = mensagens.FirstOrDefault();
+        _severidadePerfil = sucesso ? Severity.Success : Severity.Error;
+
+        if (sucesso && _usuario is not null)
+            _usuario = _usuario with { Perfil = "DOADOR" };
+
+        _carregandoPerfil = false;
+        _acaoPerfil = null;
+    }
+
+    private async Task AlterarParaGestorAsync()
+    {
+        _acaoPerfil = "gestor";
+        _carregandoPerfil = true;
+        _mensagemPerfil = null;
+
+        var (sucesso, mensagens) = await UsuarioSvc.AlterarParaGestorAsync(_email.Trim());
+
+        _mensagemPerfil = mensagens.FirstOrDefault();
+        _severidadePerfil = sucesso ? Severity.Success : Severity.Error;
+
+        if (sucesso && _usuario is not null)
+            _usuario = _usuario with { Perfil = "GESTOR_ONG" };
+
+        _carregandoPerfil = false;
+        _acaoPerfil = null;
+    }
+}
