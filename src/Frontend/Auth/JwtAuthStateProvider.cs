@@ -16,6 +16,7 @@ public class JwtAuthStateProvider : AuthenticationStateProvider
         new(new ClaimsPrincipal(new ClaimsIdentity()));
 
     private const string UsuarioKey = "cs_usuario";
+    private const string TokenKey = "cs_token";
 
     public JwtAuthStateProvider(ILocalStorageService localStorage)
     {
@@ -28,8 +29,16 @@ public class JwtAuthStateProvider : AuthenticationStateProvider
         {
             var usuario = await _localStorage.GetItemAsync<UsuarioLogado>(UsuarioKey);
 
-            if (usuario is null || usuario.Expiracao <= DateTime.UtcNow)
+            if (usuario is null)
                 return _anonimo;
+
+            if (usuario.Expiracao <= DateTime.UtcNow)
+            {
+                // Token expirado — limpa o localStorage para não ficar com dados obsoletos
+                await _localStorage.RemoveItemAsync(TokenKey);
+                await _localStorage.RemoveItemAsync(UsuarioKey);
+                return _anonimo;
+            }
 
             var identity = CriarIdentidade(usuario);
             return new AuthenticationState(new ClaimsPrincipal(identity));
@@ -39,8 +48,6 @@ public class JwtAuthStateProvider : AuthenticationStateProvider
             return _anonimo;
         }
     }
-
-
 
     /// <summary>
     /// Notifica o Blazor que o estado de auth mudou (login ou logout).
