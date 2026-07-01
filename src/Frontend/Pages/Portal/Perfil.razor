@@ -1,0 +1,487 @@
+﻿@page "/perfil"
+@attribute [Authorize]
+@inject AuthService AuthSvc
+@inject UsuarioService UsuarioSvc
+@inject NavigationManager Nav
+@inject JwtAuthStateProvider AuthProvider
+
+<PageTitle>Meu Perfil — Esperanca Solidaria</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Meu Perfil</MudText>
+
+@if (_carregando)
+{
+    <div class="es-loading">
+        <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+        <MudText Typo="Typo.body1" Class="mt-3" Color="Color.Primary">
+            Carregando seus dados...
+        </MudText>
+    </div>
+}
+else if (_usuario is null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">
+        @foreach (var erro in _errosCarregamento)
+        {
+            <div>@erro</div>
+        }
+    </MudAlert>
+}
+else
+{
+    <MudGrid>
+
+        <!-- ═══════ Dados atuais (somente leitura) ═══════ -->
+        <MudItem xs="12" md="6">
+            <MudPaper Class="pa-6" Elevation="2" Style="border-radius:16px; height:100%;">
+                <MudText Typo="Typo.h6" Class="mb-3" Style="font-weight:700; color:#1B5E20;">
+                    Dados cadastrados
+                </MudText>
+
+                <MudStack Spacing="3">
+                    <div>
+                        <MudText Typo="Typo.caption" Style="color:#888;">Nome completo</MudText>
+                        <MudText Typo="Typo.body1">@_usuario.NomeCompleto</MudText>
+                    </div>
+                    <div>
+                        <MudText Typo="Typo.caption" Style="color:#888;">E-mail</MudText>
+                        <MudText Typo="Typo.body1">@_usuario.Email</MudText>
+                    </div>
+                    <div>
+                        <MudText Typo="Typo.caption" Style="color:#888;">CPF</MudText>
+                        <MudText Typo="Typo.body1">@_usuario.Cpf</MudText>
+                    </div>
+                    <div>
+                        <MudText Typo="Typo.caption" Style="color:#888;">Perfil</MudText>
+                        <MudChip T="string" Color="Color.Primary" Size="Size.Small">@_usuario.Perfil</MudChip>
+                    </div>
+                    <div>
+                        <MudText Typo="Typo.caption" Style="color:#888;">Status</MudText>
+                        <MudChip T="string" Color="Color.Success" Size="Size.Small">@_usuario.Status</MudChip>
+                    </div>
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+
+        <!-- ═══════ Formulario de edicao ═══════ -->
+        <MudItem xs="12" md="6">
+            <MudPaper Class="pa-6" Elevation="2" Style="border-radius:16px; height:100%;">
+                <MudText Typo="Typo.h6" Class="mb-3" Style="font-weight:700; color:#1B5E20;">
+                    Editar dados
+                </MudText>
+
+                @if (_errosSalvar.Count > 0)
+                {
+                    <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true">
+                        @foreach (var erro in _errosSalvar)
+                        {
+                            <div>@erro</div>
+                        }
+                    </MudAlert>
+                }
+
+                @if (!string.IsNullOrEmpty(_mensagemSucesso))
+                {
+                    <MudAlert Severity="Severity.Success" Class="mb-4" Dense="true">
+                        @_mensagemSucesso
+                    </MudAlert>
+                }
+
+                <MudForm @ref="_form" @bind-IsValid="_formValido">
+
+                    <MudTextField @bind-Value="_nomeCompleto"
+                                  Label="Nome completo"
+                                  Variant="Variant.Outlined"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Filled.Person"
+                                  Required="true"
+                                  RequiredError="Nome completo e obrigatorio."
+                                  Class="mb-3"
+                                  Disabled="@_salvando" />
+
+                    <MudTextField @bind-Value="_cpf"
+                                  Label="CPF"
+                                  Variant="Variant.Outlined"
+                                  Mask="@(new MudBlazor.PatternMask("000.000.000-00"))"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Filled.Badge"
+                                  Required="true"
+                                  RequiredError="CPF e obrigatorio."
+                                  HelperText="Digite o CPF completo (o atual é exibido parcialmente oculto por seguranca)."
+                                  Class="mb-4"
+                                  Disabled="@_salvando" />
+
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               Size="Size.Large"
+                               OnClick="SalvarAsync"
+                               Style="border-radius:24px; font-weight:600;"
+                               Disabled="@_salvando">
+                        @if (_salvando)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                            <span>Salvando...</span>
+                        }
+                        else
+                        {
+                            <span>Salvar alterações</span>
+                        }
+                    </MudButton>
+
+                </MudForm>
+            </MudPaper>
+        </MudItem>
+
+        <!-- ═══════ Alterar Senha ═══════ -->
+        <MudItem xs="12" md="6">
+            <MudPaper Class="pa-6" Elevation="2" Style="border-radius:16px; height:100%;">
+                <MudText Typo="Typo.h6" Class="mb-2" Style="font-weight:700; color:#1B5E20;">
+                    <MudIcon Icon="@Icons.Material.Filled.Lock" Class="mr-2" Style="vertical-align:middle;" />
+                    Alterar Senha
+                </MudText>
+                <MudText Typo="Typo.body2" Class="mb-4" Style="color:#666;">
+                    Atualize sua senha de acesso ao portal.
+                </MudText>
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.VpnKey"
+                           Style="border-radius:24px; font-weight:600;"
+                           OnClick="AbrirDialogoSenha">
+                    Alterar senha
+                </MudButton>
+            </MudPaper>
+        </MudItem>
+
+        <!-- ═══════ Excluir Conta (LGPD) ═══════ -->
+        <MudItem xs="12" md="6">
+            <MudPaper Class="pa-6" Elevation="2" Style="border-radius:16px; height:100%; border:1px solid #FFCDD2;">
+                <MudText Typo="Typo.h6" Class="mb-2" Style="font-weight:700; color:#C62828;">
+                    <MudIcon Icon="@Icons.Material.Filled.DeleteForever" Class="mr-2" Style="vertical-align:middle;" />
+                    Excluir Conta
+                </MudText>
+                <MudText Typo="Typo.body2" Class="mb-4" Style="color:#666;">
+                    Solicite a exclusão definitiva da sua conta, em conformidade com a LGPD.
+                </MudText>
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Error"
+                           StartIcon="@Icons.Material.Filled.DeleteForever"
+                           Style="border-radius:24px; font-weight:600;"
+                           OnClick="AbrirDialogoExclusao">
+                    Excluir minha conta
+                </MudButton>
+            </MudPaper>
+        </MudItem>
+
+    </MudGrid>
+
+    <!-- ═══════════════════════════════════════════════════════
+         DIALOGO — Alterar Senha
+    ════════════════════════════════════════════════════════ -->
+    <MudDialog @bind-Visible="_dialogoSenhaAberto" Options="@(new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true })">
+        <TitleContent>
+            <MudText Typo="Typo.h6">
+                <MudIcon Icon="@Icons.Material.Filled.Lock" Class="mr-2" Style="vertical-align:middle;" />
+                Alterar Senha
+            </MudText>
+        </TitleContent>
+        <DialogContent>
+            @if (_errosSenha.Count > 0)
+            {
+                <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true">
+                    @foreach (var erro in _errosSenha)
+                    {
+                        <div>@erro</div>
+                    }
+                </MudAlert>
+            }
+
+            <MudForm @ref="_formSenha" @bind-IsValid="_formSenhaValido">
+                <MudTextField @bind-Value="_senhaAtual"
+                              Label="Senha atual"
+                              Variant="Variant.Outlined"
+                              InputType="@(_senhaAtualVisivel ? InputType.Text : InputType.Password)"
+                              Adornment="Adornment.End"
+                              AdornmentIcon="@(_senhaAtualVisivel ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)"
+                              OnAdornmentClick="@(() => _senhaAtualVisivel = !_senhaAtualVisivel)"
+                              Required="true"
+                              RequiredError="Senha atual e obrigatoria."
+                              Class="mb-3"
+                              Disabled="@_salvandoSenha" />
+
+                <MudTextField @bind-Value="_senhaNova"
+                              Label="Nova senha"
+                              Variant="Variant.Outlined"
+                              InputType="@(_senhaNovaVisivel ? InputType.Text : InputType.Password)"
+                              Adornment="Adornment.End"
+                              AdornmentIcon="@(_senhaNovaVisivel ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)"
+                              OnAdornmentClick="@(() => _senhaNovaVisivel = !_senhaNovaVisivel)"
+                              Required="true"
+                              RequiredError="Nova senha e obrigatoria."
+                              Class="mb-3"
+                              Disabled="@_salvandoSenha" />
+
+                <MudTextField @bind-Value="_confirmarSenhaNova"
+                              Label="Confirme a nova senha"
+                              Variant="Variant.Outlined"
+                              InputType="@(_confirmarSenhaNovaVisivel ? InputType.Text : InputType.Password)"
+                              Adornment="Adornment.End"
+                              AdornmentIcon="@(_confirmarSenhaNovaVisivel ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)"
+                              OnAdornmentClick="@(() => _confirmarSenhaNovaVisivel = !_confirmarSenhaNovaVisivel)"
+                              Required="true"
+                              RequiredError="Confirmacao de senha e obrigatoria."
+                              Validation="@(new Func<string, string?>(ValidarConfirmacaoSenhaNova))"
+                              Disabled="@_salvandoSenha" />
+            </MudForm>
+        </DialogContent>
+        <DialogActions>
+            <MudButton OnClick="FecharDialogoSenha" Disabled="@_salvandoSenha">Cancelar</MudButton>
+            <MudButton Color="Color.Primary"
+                       Variant="Variant.Filled"
+                       OnClick="SalvarSenhaAsync"
+                       Disabled="@_salvandoSenha">
+                @if (_salvandoSenha)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                    <span>Salvando...</span>
+                }
+                else
+                {
+                    <span>Confirmar</span>
+                }
+            </MudButton>
+        </DialogActions>
+    </MudDialog>
+
+    <!-- ═══════════════════════════════════════════════════════
+         DIALOGO — Excluir Conta (LGPD)
+    ════════════════════════════════════════════════════════ -->
+    <MudDialog @bind-Visible="_dialogoExclusaoAberto" Options="@(new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true })">
+        <TitleContent>
+            <MudText Typo="Typo.h6" Color="Color.Error">
+                <MudIcon Icon="@Icons.Material.Filled.DeleteForever" Class="mr-2" Style="vertical-align:middle;" />
+                Excluir minha conta
+            </MudText>
+        </TitleContent>
+        <DialogContent>
+            @if (_errosExclusao.Count > 0)
+            {
+                <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true">
+                    @foreach (var erro in _errosExclusao)
+                    {
+                        <div>@erro</div>
+                    }
+                </MudAlert>
+            }
+
+            <MudAlert Severity="Severity.Warning" Class="mb-3" Dense="true">
+                Esta ação é irreversível.
+            </MudAlert>
+
+            <MudText Typo="Typo.body2" Class="mb-3" Style="line-height:1.7;">
+                Em conformidade com a <strong>Lei Geral de Proteção de Dados (LGPD — Lei nº 13.709/2018)</strong>,
+                ao confirmar esta solicitação seus dados cadastrais (nome, e-mail e CPF) serão
+                <strong>excluídos permanentemente</strong> da plataforma Conexão Solidária, e você
+                <strong>não receberá mais nenhuma comunicação</strong> desta organização.
+            </MudText>
+
+            <MudText Typo="Typo.body2" Style="line-height:1.7;">
+                No entanto, os <strong>registros das doações já realizadas</strong> serão mantidos pelo
+                período legal exigido, em cumprimento às normas da <strong>Receita Federal</strong> para
+                fins fiscais e contábeis, podendo ser usados para emissão de comprovantes e atendimento
+                a obrigações legais, independentemente da exclusão da sua conta.
+            </MudText>
+        </DialogContent>
+        <DialogActions>
+            <MudButton OnClick="FecharDialogoExclusao" Disabled="@_excluindo">Cancelar</MudButton>
+            <MudButton Color="Color.Error"
+                       Variant="Variant.Filled"
+                       OnClick="ConfirmarExclusaoAsync"
+                       Disabled="@_excluindo">
+                @if (_excluindo)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                    <span>Excluindo...</span>
+                }
+                else
+                {
+                    <span>Sim, excluir minha conta</span>
+                }
+            </MudButton>
+        </DialogActions>
+    </MudDialog>
+}
+
+@code {
+    private UsuarioDto? _usuario;
+    private MudForm _form = default!;
+    private string _nomeCompleto = string.Empty;
+    private string _cpf = string.Empty;
+    private bool _formValido;
+    private bool _carregando = true;
+    private bool _salvando;
+    private string? _mensagemSucesso;
+    private List<string> _errosCarregamento = new();
+    private List<string> _errosSalvar = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CarregarUsuarioAsync();
+    }
+
+    private async Task CarregarUsuarioAsync()
+    {
+        _carregando = true;
+
+        var usuarioLogado = await AuthSvc.ObterUsuarioLogadoAsync();
+        if (usuarioLogado is null)
+        {
+            _errosCarregamento = new() { "Sessão expirada. Faça login novamente." };
+            _carregando = false;
+            return;
+        }
+
+        // Para o Doador, a consulta é sempre pelo e-mail logado.
+        var (sucesso, usuario, erros) = await UsuarioSvc.ObterPorEmailAsync(usuarioLogado.Email);
+
+        if (sucesso && usuario is not null)
+        {
+            _usuario = usuario;
+            _nomeCompleto = usuario.NomeCompleto;
+            _cpf = string.Empty; // CPF vem mascarado da API; usuário digita o CPF completo para alterar
+        }
+        else
+        {
+            _errosCarregamento = erros;
+        }
+
+        _carregando = false;
+    }
+
+    private async Task SalvarAsync()
+    {
+        await _form.Validate();
+        if (!_formValido) return;
+
+        _salvando = true;
+        _errosSalvar = new();
+        _mensagemSucesso = null;
+
+        var cpfLimpo = SomenteDigitos(_cpf);
+
+        var (sucesso, usuarioAtualizado, erros) = await UsuarioSvc.AlterarAsync(_nomeCompleto.Trim(), cpfLimpo);
+
+        if (sucesso && usuarioAtualizado is not null)
+        {
+            _usuario = usuarioAtualizado;
+            _mensagemSucesso = "Dados atualizados com sucesso!";
+            _cpf = string.Empty;
+        }
+        else
+        {
+            _errosSalvar = erros;
+        }
+
+        _salvando = false;
+    }
+
+    private static string SomenteDigitos(string texto) =>
+        new(texto.Where(char.IsDigit).ToArray());
+
+    // ═══════════════════════════════════════════════
+    // Alterar Senha
+    // ═══════════════════════════════════════════════
+    private bool _dialogoSenhaAberto;
+    private MudForm _formSenha = default!;
+    private bool _formSenhaValido;
+    private bool _salvandoSenha;
+    private bool _senhaAtualVisivel;
+    private bool _senhaNovaVisivel;
+    private bool _confirmarSenhaNovaVisivel;
+    private string _senhaAtual = string.Empty;
+    private string _senhaNova = string.Empty;
+    private string _confirmarSenhaNova = string.Empty;
+    private List<string> _errosSenha = new();
+
+    private void AbrirDialogoSenha()
+    {
+        _senhaAtual = string.Empty;
+        _senhaNova = string.Empty;
+        _confirmarSenhaNova = string.Empty;
+        _errosSenha = new();
+        _dialogoSenhaAberto = true;
+    }
+
+    private void FecharDialogoSenha() => _dialogoSenhaAberto = false;
+
+    private string? ValidarConfirmacaoSenhaNova(string confirmacao)
+    {
+        if (confirmacao != _senhaNova)
+            return "As senhas informadas nao coincidem.";
+        return null;
+    }
+
+    private async Task SalvarSenhaAsync()
+    {
+        await _formSenha.Validate();
+        if (!_formSenhaValido) return;
+
+        _salvandoSenha = true;
+        _errosSenha = new();
+
+        var (sucesso, mensagens) = await AuthSvc.AlterarSenhaAsync(_senhaAtual, _senhaNova);
+
+        if (sucesso)
+        {
+            _dialogoSenhaAberto = false;
+
+            // Por segurança, desloga e volta para o login após a troca de senha.
+            await AuthSvc.LogoutAsync();
+            AuthProvider.NotificarMudancaEstado();
+            Nav.NavigateTo("/login?senhaAlterada=true", forceLoad: true);
+            return;
+        }
+        else
+        {
+            _errosSenha = mensagens;
+        }
+
+        _salvandoSenha = false;
+    }
+
+    // ═══════════════════════════════════════════════
+    // Excluir Conta (LGPD)
+    // ═══════════════════════════════════════════════
+    private bool _dialogoExclusaoAberto;
+    private bool _excluindo;
+    private List<string> _errosExclusao = new();
+
+    private void AbrirDialogoExclusao()
+    {
+        _errosExclusao = new();
+        _dialogoExclusaoAberto = true;
+    }
+
+    private void FecharDialogoExclusao() => _dialogoExclusaoAberto = false;
+
+    private async Task ConfirmarExclusaoAsync()
+    {
+        if (_usuario is null) return;
+
+        _excluindo = true;
+        _errosExclusao = new();
+
+        var (sucesso, mensagens) = await UsuarioSvc.ExcluirAsync(_usuario.Email);
+
+        if (sucesso)
+        {
+            await AuthSvc.LogoutAsync();
+            AuthProvider.NotificarMudancaEstado();
+            Nav.NavigateTo("/", forceLoad: true);
+        }
+        else
+        {
+            _errosExclusao = mensagens;
+            _excluindo = false;
+        }
+    }
+}

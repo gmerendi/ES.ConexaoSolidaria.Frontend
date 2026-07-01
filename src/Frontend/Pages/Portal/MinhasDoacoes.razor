@@ -1,0 +1,94 @@
+﻿@page "/doacoes"
+@attribute [Authorize]
+@inject DoacaoService DoacaoSvc
+
+<PageTitle>Minhas Doações — Esperanca Solidaria</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">Minhas Doações</MudText>
+<MudText Typo="Typo.body2" Class="mb-4" Style="color:#666;">
+    Histórico de contribuições realizadas por você.
+</MudText>
+
+@if (_carregando)
+{
+    <div class="es-loading">
+        <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+        <MudText Typo="Typo.body1" Class="mt-3" Color="Color.Primary">
+            Carregando suas doações...
+        </MudText>
+    </div>
+}
+else if (_erros.Count > 0)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">
+        @foreach (var erro in _erros)
+        {
+            <div>@erro</div>
+        }
+    </MudAlert>
+}
+else if (!_doacoes.Any())
+{
+    <MudAlert Severity="Severity.Info" Class="mt-4">
+        Você ainda não realizou nenhuma doação. Que tal apoiar uma campanha agora?
+    </MudAlert>
+    <MudButton Variant="Variant.Filled"
+               Color="Color.Primary"
+               Class="mt-4"
+               StartIcon="@Icons.Material.Filled.Campaign"
+               Style="border-radius:24px; font-weight:600;"
+               Href="/campanhas">
+        Ver campanhas ativas
+    </MudButton>
+}
+else
+{
+    <MudPaper Class="pa-2" Elevation="2" Style="border-radius:16px;">
+        <MudTable Items="@_doacoes" Hover="true" Dense="false" Striped="true" Elevation="0">
+            <HeaderContent>
+                <MudTh>Campanha</MudTh>
+                <MudTh>Valor doado</MudTh>
+                <MudTh>Data da doação</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Campanha">@context.TituloCampanha</MudTd>
+                <MudTd DataLabel="Valor doado">
+                    <MudText Style="font-weight:600; color:#2E7D32;">
+                        R$ @context.ValorDoacao.ToString("N2", _culturaBR)
+                    </MudText>
+                </MudTd>
+                <MudTd DataLabel="Data da doação">@context.DataDoacao</MudTd>
+            </RowTemplate>
+        </MudTable>
+    </MudPaper>
+
+    <MudText Typo="Typo.body2" Class="mt-4" Style="color:#666;">
+        Total doado: <strong style="color:#2E7D32;">R$ @_totalDoado.ToString("N2", _culturaBR)</strong>
+        
+    </MudText>
+}
+
+@code {
+    private List<DoacaoSelfDto> _doacoes = new();
+    private bool _carregando = true;
+    private List<string> _erros = new();
+
+    private decimal _totalDoado => _doacoes.Sum(d => d.ValorDoacao);
+
+    private static readonly System.Globalization.CultureInfo _culturaBR =
+        new("pt-BR");
+
+    protected override async Task OnInitializedAsync()
+    {
+        _carregando = true;
+
+        var (sucesso, doacoes, erros) = await DoacaoSvc.ObterMinhasDoacoesAsync();
+
+        if (sucesso)
+            _doacoes = doacoes;
+        else
+            _erros = erros;
+
+        _carregando = false;
+    }
+}

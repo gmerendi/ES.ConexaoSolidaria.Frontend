@@ -24,10 +24,23 @@
             </MudText>
         </div>
 
-        <!-- Alerta de erro -->
-        @if (!string.IsNullOrEmpty(_erro))
+        <!-- Alerta de senha alterada -->
+        @if (SenhaAlterada)
         {
-            <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true">@_erro</MudAlert>
+            <MudAlert Severity="Severity.Success" Class="mb-4" Dense="true">
+                Senha alterada com sucesso! Faça login com sua nova senha.
+            </MudAlert>
+        }
+
+        <!-- Alerta de erro -->
+        @if (_erros.Count > 0)
+        {
+            <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true">
+                @foreach (var erro in _erros)
+                {
+                    <div>@erro</div>
+                }
+            </MudAlert>
         }
 
         <!-- Formulario -->
@@ -50,8 +63,8 @@
                           InputType="@(_senhaVisivel ? InputType.Text : InputType.Password)"
                           Adornment="Adornment.End"
                           AdornmentIcon="@(_senhaVisivel
-                              ? Icons.Material.Filled.VisibilityOff
-                              : Icons.Material.Filled.Visibility)"
+                                                        ? Icons.Material.Filled.VisibilityOff
+                                                    : Icons.Material.Filled.Visibility)"
                           OnAdornmentClick="@(() => _senhaVisivel = !_senhaVisivel)"
                           Required="true"
                           RequiredError="Senha e obrigatoria."
@@ -101,11 +114,13 @@
         background: linear-gradient(135deg, #1B5E20 0%, #2E7D32 50%, #81C784 100%);
         padding: 1rem;
     }
+
     .login-card {
         width: 100%;
         max-width: 420px;
         border-radius: 20px;
     }
+
     .login-header {
         display: flex;
         flex-direction: column;
@@ -119,19 +134,22 @@
     [SupplyParameterFromQuery]
     private string? ReturnUrl { get; set; }
 
-    private MudForm   _form       = default!;
-    private string    _email      = string.Empty;
-    private string    _senha      = string.Empty;
-    private bool      _formValido;
-    private bool      _carregando;
-    private bool      _senhaVisivel;
-    private string?   _erro;
+    [SupplyParameterFromQuery]
+    private bool SenhaAlterada { get; set; }
+
+    private MudForm _form = default!;
+    private string _email = string.Empty;
+    private string _senha = string.Empty;
+    private bool _formValido;
+    private bool _carregando;
+    private bool _senhaVisivel;
+    private List<string> _erros = new();
 
     private readonly MudTheme _tema = new()
     {
         PaletteLight = new PaletteLight
         {
-            Primary   = "#2E7D32",
+            Primary = "#2E7D32",
             Secondary = "#FF6F00",
         }
     };
@@ -148,18 +166,29 @@
         if (!_formValido) return;
 
         _carregando = true;
-        _erro       = null;
+        _erros = new();
 
-        var (sucesso, erro) = await AuthSvc.LoginAsync(new LoginRequest(_email, _senha));
+        var (sucesso, erros) = await AuthSvc.LoginAsync(new LoginRequest(_email, _senha));
 
         if (sucesso)
         {
             AuthProvider.NotificarMudancaEstado();
-            Nav.NavigateTo(ReturnUrl ?? "/portal", forceLoad: false);
+
+            var usuarioLogado = await AuthSvc.ObterUsuarioLogadoAsync();
+            var destino = usuarioLogado?.Perfil == "DOADOR"
+                ? (ReturnUrl ?? "/portal")
+                // TODO: portal do Gestor ainda não implementado — usa o mesmo destino por enquanto.
+                : (ReturnUrl ?? "/portal");
+
+            // forceLoad:true garante que o app recarregue do zero e leia o token recem-salvo
+            // no localStorage antes de avaliar a autorização da rota de destino — evita o caso
+            // em que a navegação ocorre antes do estado de autenticação propagar e o usuário
+            // acaba sendo jogado de volta para o login.
+            Nav.NavigateTo(destino, forceLoad: true);
         }
         else
         {
-            _erro = erro;
+            _erros = erros;
         }
 
         _carregando = false;

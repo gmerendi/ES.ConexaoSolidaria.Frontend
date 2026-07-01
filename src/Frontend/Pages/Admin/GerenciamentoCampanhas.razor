@@ -1,0 +1,661 @@
+﻿@page "/admin/campanhas"
+@attribute [Authorize(Roles = "GESTOR_ONG")]
+@inject CampanhaAdminService CampanhaAdminSvc
+
+<PageTitle>Gerenciamento de Campanhas — Conexão Solidária</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">Gerenciamento de Campanhas</MudText>
+<MudText Typo="Typo.body2" Class="mb-5" Style="color:#666;">
+    Busque campanhas existentes ou crie uma nova.
+</MudText>
+
+<MudGrid Spacing="4">
+
+    <!-- ═══════════════════════════════════════════════════
+         COLUNA ESQUERDA — Busca + lista de resultados
+    ═══════════════════════════════════════════════════ -->
+    <MudItem xs="12" md="5">
+        <MudPaper Class="pa-6" Elevation="2" Style="border-radius:16px;">
+
+            <MudText Typo="Typo.h6" Class="mb-3" Style="font-weight:700; color:#1B5E20;">
+                <MudIcon Icon="@Icons.Material.Filled.Search" Class="mr-2" Style="vertical-align:middle;" />
+                Buscar Campanhas
+            </MudText>
+
+            <MudStack Row="true" AlignItems="AlignItems.End" Spacing="2" Class="mb-3">
+                <MudTextField @bind-Value="_termoBusca"
+                              Label="Termo de busca"
+                              Variant="Variant.Outlined"
+                              Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Filled.Search"
+                              Style="flex:1;"
+                              Disabled="@_buscando"
+                              @onkeyup="BuscarSeEnter" />
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           Style="border-radius:24px; height:56px; min-width:90px; font-weight:600;"
+                           OnClick="BuscarAsync"
+                           Disabled="@(string.IsNullOrWhiteSpace(_termoBusca) || _buscando)">
+                    @if (_buscando)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                    }
+                    else
+                    {
+
+                        <span>Buscar</span>
+                    }
+                </MudButton>
+            </MudStack>
+
+            @if (_errosBusca.Count > 0)
+            {
+                <MudAlert Severity="Severity.Error" Dense="true" Class="mb-3">
+                    @foreach (var e in _errosBusca)
+                    {
+                        <div>@e</div>
+                    }
+                </MudAlert>
+            }
+
+            @if (_resultadosBusca.Any())
+            {
+                <MudText Typo="Typo.caption" Class="mb-2" Style="color:#888;">
+                    @_resultadosBusca.Count resultado(s) — clique para ver detalhes
+                </MudText>
+
+                <!-- Lista com scroll fixo para ~5 itens -->
+                <div style="max-height:340px; overflow-y:auto; border-radius:8px; border:1px solid #E0E0E0;">
+                    @foreach (var c in _resultadosBusca)
+                    {
+                        var isAtiva = c.Guid == _campanhaDetalhada?.Guid;
+                        <div @onclick="@(() => VerDetalhesAsync(c.Guid))"
+                             style="padding:12px 16px; cursor:pointer; border-bottom:1px solid #F0F0F0;
+                            background:@(isAtiva ? "#E8F5E9" : "white");
+                            transition: background 0.15s;">
+                            <MudText Typo="Typo.body1" Style="@($"font-weight:600; color:{(isAtiva ? "#1B5E20" : "#222")}")">
+                                @c.Titulo
+                            </MudText>
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mt-1">
+                                <MudText Typo="Typo.caption" Style="color:#888;">
+                                    @c.DataInicio → @c.DataFim
+                                </MudText>
+                                <MudChip T="string" Size="Size.Small"
+                                         Color="@(c.StatusCampanha == "ATIVA" ? Color.Success : Color.Default)">
+                                    @c.StatusCampanha
+                                </MudChip>
+                            </MudStack>
+                        </div>
+                    }
+                </div>
+            }
+            else if (_buscaRealizada)
+            {
+                <MudAlert Severity="Severity.Info" Dense="true">
+                    Nenhuma campanha encontrada para "@_termoBusca".
+                </MudAlert>
+            }
+
+        </MudPaper>
+    </MudItem>
+
+    <!-- ═══════════════════════════════════════════════════
+         COLUNA DIREITA — Detalhes da campanha selecionada
+         ou formulário de criação
+    ═══════════════════════════════════════════════════ -->
+    <MudItem xs="12" md="7">
+
+        <!-- Tabs: Detalhes / Criar -->
+        <MudTabs @bind-ActivePanelIndex="_abaAtiva" Elevation="0" Rounded="true" ApplyEffectsToContainer="true">
+
+            <!-- ─── Detalhes ─── -->
+            <MudTabPanel Text="Detalhes" Icon="@Icons.Material.Filled.Info">
+                <MudPaper Class="pa-6 mt-2" Elevation="2" Style="border-radius:16px;">
+
+                    @if (_carregandoDetalhes)
+                    {
+                        <div class="es-loading">
+                            <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                            <MudText Typo="Typo.body2" Class="mt-2" Color="Color.Primary">Carregando...</MudText>
+                        </div>
+                    }
+                    else if (_errosDetalhes.Count > 0)
+                    {
+                        <MudAlert Severity="Severity.Error" Dense="true">
+                            @foreach (var e in _errosDetalhes)
+                            {
+                                <div>@e</div>
+                            }
+                        </MudAlert>
+                    }
+                    else if (_campanhaDetalhada is null)
+                    {
+                        <div style="text-align:center; padding:2rem 0; color:#bbb;">
+                            <MudIcon Icon="@Icons.Material.Filled.Campaign" Style="font-size:3rem;" />
+                            <MudText Typo="Typo.body2" Class="mt-2">
+                                Busque e selecione uma campanha para ver os detalhes.
+                            </MudText>
+                        </div>
+                    }
+                    else
+                    {
+                        var c = _campanhaDetalhada;
+                        <MudStack Spacing="3">
+                            <div>
+                                <MudText Typo="Typo.caption" Style="color:#888;">Título</MudText>
+                                <MudText Typo="Typo.h6" Style="font-weight:700; color:#1B5E20;">@c.Titulo</MudText>
+                            </div>
+                            <div>
+                                <MudText Typo="Typo.caption" Style="color:#888;">Descrição</MudText>
+                                <MudText Typo="Typo.body2">@c.Descricao</MudText>
+                            </div>
+                            <MudGrid Spacing="2">
+                                <MudItem xs="6">
+                                    <MudText Typo="Typo.caption" Style="color:#888;">Meta financeira</MudText>
+                                    <MudText Typo="Typo.body1" Style="font-weight:600; color:#2E7D32;">
+                                        R$ @c.MetaFinanceira.ToString("N2", _culturaBR)
+                                    </MudText>
+                                </MudItem>
+                                <MudItem xs="6">
+                                    <MudText Typo="Typo.caption" Style="color:#888;">Valor arrecadado</MudText>
+                                    <MudText Typo="Typo.body1" Style="font-weight:600;">
+                                        R$ @c.ValorArrecadado.ToString("N2", _culturaBR)
+                                    </MudText>
+                                </MudItem>
+                                <MudItem xs="6">
+                                    <MudText Typo="Typo.caption" Style="color:#888;">Data início</MudText>
+                                    <MudText Typo="Typo.body2">@c.DataInicio</MudText>
+                                </MudItem>
+                                <MudItem xs="6">
+                                    <MudText Typo="Typo.caption" Style="color:#888;">Data fim</MudText>
+                                    <MudText Typo="Typo.body2">@c.DataFim</MudText>
+                                </MudItem>
+                                <MudItem xs="6">
+                                    <MudText Typo="Typo.caption" Style="color:#888;">Status</MudText>
+                                    <MudChip T="string" Size="Size.Small"
+                                             Color="@(c.StatusCampanha == "ATIVA" ? Color.Success : Color.Default)">
+                                        @c.StatusCampanha
+                                    </MudChip>
+                                </MudItem>
+                                <MudItem xs="6">
+                                    <MudText Typo="Typo.caption" Style="color:#888;">GUID</MudText>
+                                    <MudText Typo="Typo.caption" Style="font-family:monospace; color:#555; word-break:break-all;">
+                                        @c.Guid
+                                    </MudText>
+                                </MudItem>
+                            </MudGrid>
+
+                            @if (c.MetaFinanceira > 0)
+                            {
+                                var pct = (double)Math.Min(c.ValorArrecadado / c.MetaFinanceira * 100, 100);
+                                <div>
+                                    <MudText Typo="Typo.caption" Style="color:#888;" Class="mb-1">
+                                        Progresso — @pct.ToString("N1", _culturaBR)%
+                                    </MudText>
+                                    <MudProgressLinear Value="@pct" Color="Color.Primary" Rounded="true" Size="Size.Medium" />
+                                </div>
+                            }
+
+                            <!-- Feedback das ações -->
+                            @if (_mensagemAcao is not null)
+                            {
+                                <MudAlert Severity="@_severidadeAcao" Dense="true">@_mensagemAcao</MudAlert>
+                            }
+
+                            <!-- Botões de ação -->
+                            <MudDivider />
+                            <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap">
+                                <MudButton Variant="Variant.Outlined"
+                                           Color="Color.Primary"
+                                           StartIcon="@Icons.Material.Filled.Edit"
+                                           Style="border-radius:24px; font-weight:600;"
+                                           OnClick="AbrirModalEdicao"
+                                           Disabled="@_executandoAcao">
+                                    Alterar
+                                </MudButton>
+
+                                <MudButton Variant="Variant.Filled"
+                                           Color="Color.Success"
+                                           StartIcon="@Icons.Material.Filled.CheckCircle"
+                                           Style="border-radius:24px; font-weight:600;"
+                                           OnClick="ConcluirAsync"
+                                           Disabled="@(_executandoAcao || c.StatusCampanha != "ATIVA")">
+                                    @if (_executandoAcao && _acaoEmAndamento == "concluir")
+                                    {
+                                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-1" />
+                                    }
+                                    Concluir
+                                </MudButton>
+
+                                <MudButton Variant="Variant.Filled"
+                                           Color="Color.Error"
+                                           StartIcon="@Icons.Material.Filled.Cancel"
+                                           Style="border-radius:24px; font-weight:600;"
+                                           OnClick="CancelarAsync"
+                                           Disabled="@(_executandoAcao || c.StatusCampanha != "ATIVA")">
+                                    @if (_executandoAcao && _acaoEmAndamento == "cancelar")
+                                    {
+                                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-1" />
+                                    }
+                                    Cancelar
+                                </MudButton>
+                            </MudStack>
+
+                        </MudStack>
+                    }
+
+                </MudPaper>
+            </MudTabPanel>
+
+            <!-- ─── Criar campanha ─── -->
+            <MudTabPanel Text="Nova Campanha" Icon="@Icons.Material.Filled.Add">
+                <MudPaper Class="pa-6 mt-2" Elevation="2" Style="border-radius:16px;">
+
+                    <MudText Typo="Typo.h6" Class="mb-4" Style="font-weight:700; color:#1B5E20;">
+                        Nova Campanha
+                    </MudText>
+
+                    @if (_mensagemCriacao is not null)
+                    {
+                        <MudAlert Severity="@_severidadeCriacao" Dense="true" Class="mb-4">
+                            @_mensagemCriacao
+                        </MudAlert>
+                    }
+
+                    <MudForm @ref="_formCriacao" @bind-IsValid="_formCriacaoValido">
+
+                        <MudTextField @bind-Value="_titulo"
+                                      Label="Título"
+                                      Variant="Variant.Outlined"
+                                      Required="true"
+                                      RequiredError="Título é obrigatório."
+                                      Class="mb-3"
+                                      Disabled="@_criando" />
+
+                        <MudTextField @bind-Value="_descricao"
+                                      Label="Descrição"
+                                      Variant="Variant.Outlined"
+                                      Lines="3"
+                                      Required="true"
+                                      RequiredError="Descrição é obrigatória."
+                                      Class="mb-3"
+                                      Disabled="@_criando" />
+
+                        <MudNumericField @bind-Value="_metaFinanceira"
+                                         Label="Meta financeira (R$)"
+                                         Variant="Variant.Outlined"
+                                         Min="1m"
+                                         Format="N2"
+                                         Culture="@_culturaBR"
+                                         Adornment="Adornment.Start"
+                                         AdornmentText="R$"
+                                         Required="true"
+                                         RequiredError="Meta financeira é obrigatória."
+                                         Class="mb-3"
+                                         Disabled="@_criando" />
+
+                        <MudGrid Spacing="3" Class="mb-4">
+                            <MudItem xs="6">
+                                <MudDatePicker @bind-Date="_dataInicio"
+                                               Label="Data início"
+                                               Variant="Variant.Outlined"
+                                               Disabled="@_criando" />
+                            </MudItem>
+                            <MudItem xs="6">
+                                <MudDatePicker @bind-Date="_dataFim"
+                                               Label="Data fim"
+                                               Variant="Variant.Outlined"
+                                               Disabled="@_criando" />
+                            </MudItem>
+                        </MudGrid>
+
+                        <MudButton Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   FullWidth="true"
+                                   Size="Size.Large"
+                                   Style="border-radius:24px; font-weight:600;"
+                                   StartIcon="@Icons.Material.Filled.Add"
+                                   OnClick="CriarAsync"
+                                   Disabled="@_criando">
+                            @if (_criando)
+                            {
+                                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                                <span>Criando...</span>
+                            }
+                            else
+                            {
+
+                                <span>Criar Campanha</span>
+                            }
+                        </MudButton>
+
+                    </MudForm>
+                </MudPaper>
+            </MudTabPanel>
+
+        </MudTabs>
+    </MudItem>
+
+</MudGrid>
+
+<!-- ═══════ Modal — Alterar Campanha ═══════ -->
+<MudDialog @bind-Visible="_modalEdicaoAberto"
+           Options="@(new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, CloseOnEscapeKey = true })">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Edit" Class="mr-2" Style="vertical-align:middle;" />
+            Alterar Campanha
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (_mensagemEdicao is not null)
+        {
+            <MudAlert Severity="@_severidadeEdicao" Dense="true" Class="mb-4">@_mensagemEdicao</MudAlert>
+        }
+
+        <MudForm @ref="_formEdicao" @bind-IsValid="_formEdicaoValido">
+
+            <MudTextField @bind-Value="_editTitulo"
+                          Label="Título"
+                          Variant="Variant.Outlined"
+                          Required="true"
+                          RequiredError="Título é obrigatório."
+                          Class="mb-3"
+                          Disabled="@_salvandoEdicao" />
+
+            <MudTextField @bind-Value="_editDescricao"
+                          Label="Descrição"
+                          Variant="Variant.Outlined"
+                          Lines="3"
+                          Required="true"
+                          RequiredError="Descrição é obrigatória."
+                          Class="mb-3"
+                          Disabled="@_salvandoEdicao" />
+
+            <MudNumericField @bind-Value="_editMeta"
+                             Label="Meta financeira (R$)"
+                             Variant="Variant.Outlined"
+                             Min="1m"
+                             Format="N2"
+                             Culture="@_culturaBR"
+                             Adornment="Adornment.Start"
+                             AdornmentText="R$"
+                             Required="true"
+                             RequiredError="Meta é obrigatória."
+                             Class="mb-3"
+                             Disabled="@_salvandoEdicao" />
+
+            <MudGrid Spacing="2">
+                <MudItem xs="6">
+                    <MudDatePicker @bind-Date="_editDataInicio"
+                                   Label="Data início"
+                                   Variant="Variant.Outlined"
+                                   Disabled="@_salvandoEdicao" />
+                </MudItem>
+                <MudItem xs="6">
+                    <MudDatePicker @bind-Date="_editDataFim"
+                                   Label="Data fim"
+                                   Variant="Variant.Outlined"
+                                   Disabled="@_salvandoEdicao" />
+                </MudItem>
+            </MudGrid>
+
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => _modalEdicaoAberto = false)" Disabled="@_salvandoEdicao">
+            Cancelar
+        </MudButton>
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   OnClick="SalvarEdicaoAsync"
+                   Disabled="@_salvandoEdicao">
+            @if (_salvandoEdicao)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                <span>Salvando...</span>
+            }
+            else
+            {
+
+                <span>Salvar</span>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    // ═══ Busca ═══
+    private string _termoBusca = string.Empty;
+    private bool _buscando;
+    private bool _buscaRealizada;
+    private List<CampanhaAdminDto> _resultadosBusca = new();
+    private List<string> _errosBusca = new();
+
+    // ═══ Detalhes ═══
+    private CampanhaAdminDto? _campanhaDetalhada;
+    private bool _carregandoDetalhes;
+    private List<string> _errosDetalhes = new();
+
+    // ═══ Ações sobre a campanha detalhada ═══
+    private bool _executandoAcao;
+    private string? _acaoEmAndamento;
+    private string? _mensagemAcao;
+    private Severity _severidadeAcao = Severity.Success;
+
+    // ═══ Modal de edição ═══
+    private bool _modalEdicaoAberto;
+    private MudForm _formEdicao = default!;
+    private bool _formEdicaoValido;
+    private bool _salvandoEdicao;
+    private string _editTitulo = string.Empty;
+    private string _editDescricao = string.Empty;
+    private decimal _editMeta = 0m;
+    private DateTime? _editDataInicio;
+    private DateTime? _editDataFim;
+    private string? _mensagemEdicao;
+    private Severity _severidadeEdicao = Severity.Success;
+
+    private void AbrirModalEdicao()
+    {
+        if (_campanhaDetalhada is null) return;
+
+        _editTitulo = _campanhaDetalhada.Titulo;
+        _editDescricao = _campanhaDetalhada.Descricao;
+        _editMeta = _campanhaDetalhada.MetaFinanceira;
+        _mensagemEdicao = null;
+
+        // As datas vêm como string ("2026-Jun-10") — tenta parsear para preencher os pickers
+        _editDataInicio = DateTime.TryParse(_campanhaDetalhada.DataInicio, out var di) ? di : DateTime.Today;
+        _editDataFim = DateTime.TryParse(_campanhaDetalhada.DataFim, out var df) ? df : DateTime.Today.AddMonths(1);
+
+        _modalEdicaoAberto = true;
+    }
+
+    private async Task SalvarEdicaoAsync()
+    {
+        await _formEdicao.Validate();
+        if (!_formEdicaoValido) return;
+
+        if (_editDataInicio is null || _editDataFim is null)
+        {
+            _mensagemEdicao = "Informe as datas de início e fim.";
+            _severidadeEdicao = Severity.Warning;
+            return;
+        }
+
+        if (_editDataFim <= _editDataInicio)
+        {
+            _mensagemEdicao = "A data de fim deve ser posterior à data de início.";
+            _severidadeEdicao = Severity.Warning;
+            return;
+        }
+
+        _salvandoEdicao = true;
+        _mensagemEdicao = null;
+
+        var request = new AlterarCampanhaRequest(
+            _campanhaDetalhada!.Guid,
+            _editTitulo.Trim(),
+            _editDescricao.Trim(),
+            _editMeta,
+            DateTime.SpecifyKind(_editDataInicio.Value, DateTimeKind.Utc),
+            DateTime.SpecifyKind(_editDataFim.Value, DateTimeKind.Utc));
+
+        var (sucesso, mensagens) = await CampanhaAdminSvc.AlterarAsync(request);
+
+        _mensagemEdicao = mensagens.FirstOrDefault();
+        _severidadeEdicao = sucesso ? Severity.Success : Severity.Error;
+
+        if (sucesso)
+        {
+            // Recarrega os detalhes para refletir as alterações
+            await VerDetalhesAsync(_campanhaDetalhada.Guid);
+            _modalEdicaoAberto = false;
+            _mensagemAcao = "Campanha alterada com sucesso!";
+            _severidadeAcao = Severity.Success;
+        }
+
+        _salvandoEdicao = false;
+    }
+
+    private async Task CancelarAsync()
+    {
+        if (_campanhaDetalhada is null) return;
+        _acaoEmAndamento = "cancelar";
+        _executandoAcao = true;
+        _mensagemAcao = null;
+
+        var (sucesso, mensagens) = await CampanhaAdminSvc.CancelarAsync(_campanhaDetalhada.Guid);
+
+        _mensagemAcao = mensagens.FirstOrDefault();
+        _severidadeAcao = sucesso ? Severity.Success : Severity.Error;
+
+        if (sucesso)
+            await VerDetalhesAsync(_campanhaDetalhada.Guid);
+
+        _executandoAcao = false;
+        _acaoEmAndamento = null;
+    }
+
+    private async Task ConcluirAsync()
+    {
+        if (_campanhaDetalhada is null) return;
+        _acaoEmAndamento = "concluir";
+        _executandoAcao = true;
+        _mensagemAcao = null;
+
+        var (sucesso, mensagens) = await CampanhaAdminSvc.ConcluirAsync(_campanhaDetalhada.Guid);
+
+        _mensagemAcao = mensagens.FirstOrDefault();
+        _severidadeAcao = sucesso ? Severity.Success : Severity.Error;
+
+        if (sucesso)
+            await VerDetalhesAsync(_campanhaDetalhada.Guid);
+
+        _executandoAcao = false;
+        _acaoEmAndamento = null;
+    }
+    private MudForm _formCriacao = default!;
+    private bool _formCriacaoValido;
+    private bool _criando;
+    private string _titulo = string.Empty;
+    private string _descricao = string.Empty;
+    private decimal _metaFinanceira = 1000m;
+    private DateTime? _dataInicio = DateTime.Today;
+    private DateTime? _dataFim = DateTime.Today.AddMonths(1);
+    private string? _mensagemCriacao;
+    private Severity _severidadeCriacao = Severity.Success;
+
+    private int _abaAtiva;
+
+    private static readonly System.Globalization.CultureInfo _culturaBR = new("pt-BR");
+
+    private async Task BuscarAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_termoBusca)) return;
+
+        _buscando = true;
+        _buscaRealizada = false;
+        _errosBusca = new();
+        _resultadosBusca = new();
+
+        var (sucesso, campanhas, erros) = await CampanhaAdminSvc.BuscarAsync(_termoBusca.Trim());
+
+        _buscaRealizada = true;
+        if (sucesso) _resultadosBusca = campanhas;
+        else _errosBusca = erros;
+
+        _buscando = false;
+    }
+
+    private async Task BuscarSeEnter(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await BuscarAsync();
+    }
+
+    private async Task VerDetalhesAsync(Guid guid)
+    {
+        _abaAtiva = 0; // garante que a aba Detalhes fique ativa
+        _carregandoDetalhes = true;
+        _campanhaDetalhada = null;
+        _errosDetalhes = new();
+
+        var (sucesso, campanha, erros) = await CampanhaAdminSvc.ObterPorGuidAsync(guid);
+
+        if (sucesso) _campanhaDetalhada = campanha;
+        else _errosDetalhes = erros;
+
+        _carregandoDetalhes = false;
+    }
+
+    private async Task CriarAsync()
+    {
+        await _formCriacao.Validate();
+        if (!_formCriacaoValido) return;
+
+        if (_dataInicio is null || _dataFim is null)
+        {
+            _mensagemCriacao = "Informe as datas de início e fim da campanha.";
+            _severidadeCriacao = Severity.Warning;
+            return;
+        }
+
+        if (_dataFim <= _dataInicio)
+        {
+            _mensagemCriacao = "A data de fim deve ser posterior à data de início.";
+            _severidadeCriacao = Severity.Warning;
+            return;
+        }
+
+        _criando = true;
+        _mensagemCriacao = null;
+
+        // MudDatePicker retorna Kind=Unspecified — converte para UTC antes de enviar,
+        // pois o PostgreSQL exige timestamp with time zone em UTC.
+        var request = new CriarCampanhaRequest(
+            _titulo.Trim(),
+            _descricao.Trim(),
+            _metaFinanceira,
+            DateTime.SpecifyKind(_dataInicio.Value, DateTimeKind.Utc),
+            DateTime.SpecifyKind(_dataFim.Value, DateTimeKind.Utc));
+
+        var (sucesso, mensagens) = await CampanhaAdminSvc.CriarAsync(request);
+
+        _mensagemCriacao = mensagens.FirstOrDefault();
+        _severidadeCriacao = sucesso ? Severity.Success : Severity.Error;
+
+        if (sucesso)
+        {
+            await _formCriacao.ResetAsync();
+            // ResetAsync zera os campos vinculados — reaplica os defaults depois
+            _titulo = string.Empty;
+            _descricao = string.Empty;
+            _metaFinanceira = 1000m;
+            _dataInicio = DateTime.Today;
+            _dataFim = DateTime.Today.AddMonths(1);
+        }
+
+        _criando = false;
+    }
+}

@@ -1,0 +1,253 @@
+﻿@page "/cadastro"
+@layout EmptyLayout
+@inject AuthService AuthSvc
+@inject NavigationManager Nav
+
+<PageTitle>Cadastro de Doador — Esperanca Solidaria</PageTitle>
+
+<MudThemeProvider Theme="@_tema" />
+
+<div class="cadastro-container">
+    <MudPaper Class="cadastro-card pa-8" Elevation="4">
+
+        @if (_cadastroConcluido)
+        {
+            <!-- ═══════ Confirmação pós-cadastro ═══════ -->
+            <div class="cadastro-sucesso">
+                <MudIcon Icon="@Icons.Material.Filled.CheckCircle"
+                         Color="Color.Success"
+                         Style="font-size:3.5rem;" />
+                <MudText Typo="Typo.h5" Color="Color.Primary" Class="mt-3 mb-2" Style="font-weight:700;">
+                    Cadastro realizado!
+                </MudText>
+                <MudText Typo="Typo.body1" Class="mb-4" Style="color:#444;">
+                    @_mensagemApi
+                </MudText>
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           FullWidth="true"
+                           Size="Size.Large"
+                           Style="border-radius:24px; font-weight:600;"
+                           OnClick='() => Nav.NavigateTo("/login")'>
+                    Ir para o login
+                </MudButton>
+            </div>
+        }
+        else
+        {
+            <!-- ═══════ Cabecalho ═══════ -->
+            <div class="cadastro-header">
+                <MudIcon Icon="@Icons.Material.Filled.VolunteerActivism"
+                         Color="Color.Primary"
+                         Style="font-size:3rem;" />
+                <MudText Typo="Typo.h5" Color="Color.Primary" Class="mt-2 mb-0" Style="font-weight:700;">
+                    Esperanca Solidaria
+                </MudText>
+                <MudText Typo="Typo.body2" Style="color:#888; margin-top:4px;">
+                    Cadastro de novo doador
+                </MudText>
+            </div>
+
+            <!-- Alerta de erro -->
+            @if (_erros.Count > 0)
+            {
+                <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true">
+                    @foreach (var erro in _erros)
+                    {
+                        <div>@erro</div>
+                    }
+                </MudAlert>
+            }
+
+            <!-- Formulario -->
+            <MudForm @ref="_form" @bind-IsValid="_formValido">
+
+                <MudTextField @bind-Value="_nomeCompleto"
+                              Label="Nome completo"
+                              Variant="Variant.Outlined"
+                              Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Filled.Person"
+                              Required="true"
+                              RequiredError="Nome completo e obrigatorio."
+                              Class="mb-3"
+                              Disabled="@_carregando" />
+
+                <MudTextField @bind-Value="_email"
+                              Label="E-mail"
+                              Variant="Variant.Outlined"
+                              InputType="InputType.Email"
+                              Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Filled.Email"
+                              Required="true"
+                              RequiredError="E-mail e obrigatorio."
+                              Class="mb-3"
+                              Disabled="@_carregando" />
+
+                <MudTextField @bind-Value="_cpf"
+                              Label="CPF"
+                              Variant="Variant.Outlined"
+                              Mask="@(new MudBlazor.PatternMask("000.000.000-00"))"
+                              Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Filled.Badge"
+                              Required="true"
+                              RequiredError="CPF e obrigatorio."
+                              Class="mb-3"
+                              Disabled="@_carregando" />
+
+                <MudTextField @bind-Value="_senha"
+                              Label="Senha"
+                              Variant="Variant.Outlined"
+                              InputType="@(_senhaVisivel ? InputType.Text : InputType.Password)"
+                              Adornment="Adornment.End"
+                              AdornmentIcon="@(_senhaVisivel
+                                                                ? Icons.Material.Filled.VisibilityOff
+                                                            : Icons.Material.Filled.Visibility)"
+                              OnAdornmentClick="@(() => _senhaVisivel = !_senhaVisivel)"
+                              Required="true"
+                              RequiredError="Senha e obrigatoria."
+                              Class="mb-3"
+                              Disabled="@_carregando" />
+
+                <MudTextField @bind-Value="_confirmarSenha"
+                              Label="Confirme a senha"
+                              Variant="Variant.Outlined"
+                              InputType="@(_confirmarSenhaVisivel ? InputType.Text : InputType.Password)"
+                              Adornment="Adornment.End"
+                              AdornmentIcon="@(_confirmarSenhaVisivel
+                                                                ? Icons.Material.Filled.VisibilityOff
+                                                            : Icons.Material.Filled.Visibility)"
+                              OnAdornmentClick="@(() => _confirmarSenhaVisivel = !_confirmarSenhaVisivel)"
+                              Required="true"
+                              RequiredError="Confirmacao de senha e obrigatoria."
+                              Validation="@(new Func<string, string?>(ValidarConfirmacaoSenha))"
+                              Class="mb-4"
+                              Disabled="@_carregando" />
+
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           FullWidth="true"
+                           Size="Size.Large"
+                           OnClick="CadastrarAsync"
+                           Style="border-radius:24px; font-weight:600;"
+                           Disabled="@_carregando">
+                    @if (_carregando)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                        <span>Cadastrando...</span>
+                    }
+                    else
+                    {
+                        <span>Cadastrar</span>
+                    }
+                </MudButton>
+
+            </MudForm>
+
+            <MudDivider Class="my-4" />
+
+            <div class="text-center">
+                <MudButton Variant="Variant.Text"
+                           Color="Color.Default"
+                           StartIcon="@Icons.Material.Filled.ArrowBack"
+                           OnClick='() => Nav.NavigateTo("/")'>
+                    Voltar ao site
+                </MudButton>
+            </div>
+        }
+
+    </MudPaper>
+</div>
+
+<style>
+    .cadastro-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        background: linear-gradient(135deg, #1B5E20 0%, #2E7D32 50%, #81C784 100%);
+        padding: 1rem;
+    }
+
+    .cadastro-card {
+        width: 100%;
+        max-width: 460px;
+        border-radius: 20px;
+    }
+
+    .cadastro-header {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+
+    .cadastro-sucesso {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        padding: 1rem 0;
+    }
+</style>
+
+@code {
+    private MudForm _form = default!;
+    private string _nomeCompleto = string.Empty;
+    private string _email = string.Empty;
+    private string _cpf = string.Empty;
+    private string _senha = string.Empty;
+    private string _confirmarSenha = string.Empty;
+    private bool _formValido;
+    private bool _carregando;
+    private bool _senhaVisivel;
+    private bool _confirmarSenhaVisivel;
+    private bool _cadastroConcluido;
+    private List<string> _erros = new();
+    private string? _mensagemApi;
+
+    private readonly MudTheme _tema = new()
+    {
+        PaletteLight = new PaletteLight
+        {
+            Primary = "#2E7D32",
+            Secondary = "#FF6F00",
+        }
+    };
+
+    private async Task CadastrarAsync()
+    {
+        await _form.Validate();
+        if (!_formValido) return;
+
+        _carregando = true;
+        _erros = new();
+
+        var cpfLimpo = SomenteDigitos(_cpf);
+
+        var (sucesso, mensagens) = await AuthSvc.CadastrarDoadorAsync(
+            new CadastroDoadorRequest(_nomeCompleto.Trim(), _email.Trim(), cpfLimpo, _senha));
+
+        if (sucesso)
+        {
+            _mensagemApi = mensagens.FirstOrDefault();
+            _cadastroConcluido = true;
+        }
+        else
+        {
+            _erros = mensagens;
+        }
+
+        _carregando = false;
+    }
+
+    private string? ValidarConfirmacaoSenha(string confirmacao)
+    {
+        if (confirmacao != _senha)
+            return "As senhas informadas nao coincidem.";
+        return null;
+    }
+
+    private static string SomenteDigitos(string texto) =>
+        new(texto.Where(char.IsDigit).ToArray());
+}

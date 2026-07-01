@@ -1,0 +1,56 @@
+﻿@page "/campanhas"
+@attribute [Authorize]
+@inject CampanhaPublicaService CampanhaService
+@inject NavigationManager Nav
+
+<PageTitle>Campanhas — Esperanca Solidaria</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">Campanhas ativas</MudText>
+<MudText Typo="Typo.body2" Class="mb-4" Style="color:#666;">
+    Escolha uma causa e faça a diferença agora mesmo.
+</MudText>
+
+@if (_carregando)
+{
+    <div class="es-loading">
+        <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+        <MudText Typo="Typo.body1" Class="mt-3" Color="Color.Primary">
+            Carregando campanhas...
+        </MudText>
+    </div>
+}
+else if (!_campanhas.Any())
+{
+    <MudAlert Severity="Severity.Info" Class="mt-4">
+        Nenhuma campanha ativa no momento. Volte em breve!
+    </MudAlert>
+}
+else
+{
+    <MudGrid Spacing="4">
+        @foreach (var campanha in _campanhas)
+        {
+            <MudItem xs="12" sm="6" md="4">
+                <CampanhaCard Campanha="campanha" OnQueroDoar="IrParaDoacao" />
+            </MudItem>
+        }
+    </MudGrid>
+}
+
+@code {
+    private List<CampanhaPublicaResponse> _campanhas = new();
+    private bool _carregando = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _carregando = true;
+        _campanhas = await CampanhaService.ObterCampanhasAtivasAsync(pagina: 1, tamanhoPagina: 10);
+        _carregando = false;
+    }
+
+    private void IrParaDoacao(Guid guidCampanha)
+    {
+        // TODO: fluxo de doação ainda não implementado.
+        Nav.NavigateTo($"/doacoes/nova?campanha={guidCampanha}");
+    }
+}

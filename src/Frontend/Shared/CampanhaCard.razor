@@ -1,0 +1,70 @@
+﻿@* Card de campanha reutilizado na Landing Page (pública) e no Portal do Doador (autenticado). *@
+
+<MudCard Class="es-card" Elevation="2">
+
+    <div class="es-card-header">
+        <MudIcon Icon="@Icons.Material.Filled.Campaign"
+                 Style="font-size:2.5rem; color:rgba(255,255,255,0.9);" />
+        <div class="es-card-badge">
+            @Campanha.DiasRestantes dias restantes
+        </div>
+    </div>
+
+    <MudCardContent Class="es-card-body">
+        <MudText Typo="Typo.h6" Class="es-card-titulo">
+            @Campanha.Titulo
+        </MudText>
+        <MudText Typo="Typo.body2" Class="es-card-descricao">
+            @TruncaDescricao(Campanha.Descricao, 120)
+        </MudText>
+
+        <div class="es-progresso-bloco">
+            <div class="es-progresso-topo">
+                <span class="es-arrecadado">
+                    R$ @Campanha.ValorArrecadado.ToString()
+                </span>
+                <span class="es-meta">
+                    de R$ @Campanha.MetaFinanceira.ToString()
+                </span>
+            </div>
+            <MudProgressLinear Value="@((double)Campanha.PercentualArrecadado)"
+                               Color="Color.Primary"
+                               Rounded="true"
+                               Size="Size.Medium"
+                               Class="es-progress-bar" />
+            <MudText Typo="Typo.caption" Color="Color.Primary">
+                @Campanha.PercentualArrecadado% da meta atingida
+            </MudText>
+        </div>
+    </MudCardContent>
+
+    @if (MostrarAcao)
+    {
+        <MudCardActions Class="es-card-actions">
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       FullWidth="true"
+                       Style="border-radius:24px; font-weight:600;"
+                       StartIcon="@Icons.Material.Filled.Favorite"
+                       OnClick="@(() => OnQueroDoar.InvokeAsync(Campanha.Guid))">
+                Quero Doar
+            </MudButton>
+        </MudCardActions>
+    }
+
+</MudCard>
+
+@code {
+    [Parameter, EditorRequired]
+    public CampanhaPublicaResponse Campanha { get; set; } = default!;
+
+    /// <summary>Se falso, oculta o botao "Quero Doar" (ex.: quando ainda nao ha fluxo de doacao implementado).</summary>
+    [Parameter]
+    public bool MostrarAcao { get; set; } = true;
+
+    [Parameter]
+    public EventCallback<Guid> OnQueroDoar { get; set; }
+
+    private static string TruncaDescricao(string texto, int limite) =>
+        texto.Length <= limite ? texto : texto[..limite].TrimEnd() + "...";
+}

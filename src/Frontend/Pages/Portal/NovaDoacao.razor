@@ -1,0 +1,239 @@
+﻿@page "/doacoes/nova"
+@attribute [Authorize]
+@inject DoacaoService DoacaoSvc
+@inject CampanhaPublicaService CampanhaService
+@inject NavigationManager Nav
+
+<PageTitle>Fazer Doação — Esperanca Solidaria</PageTitle>
+
+@if (_carregando)
+{
+    <div class="es-loading">
+        <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+        <MudText Typo="Typo.body1" Class="mt-3" Color="Color.Primary">Carregando campanha...</MudText>
+    </div>
+}
+else if (_campanha is null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">
+        Campanha não encontrada ou não está mais ativa.
+    </MudAlert>
+    <MudButton Variant="Variant.Outlined" Color="Color.Primary" Href="/campanhas" Style="border-radius:24px;">
+        Ver campanhas ativas
+    </MudButton>
+}
+else if (_doacaoRealizada is not null)
+{
+    <!-- ═══════ Confirmação de sucesso ═══════ -->
+    <div style="max-width:560px; margin:0 auto; text-align:center; padding:2rem 0;">
+        <MudIcon Icon="@Icons.Material.Filled.Favorite"
+                 Style="font-size:5rem; color:#2E7D32;" />
+
+        <MudText Typo="Typo.h4" Class="mt-3 mb-1" Style="font-weight:700; color:#1B5E20;">
+            Obrigado pela sua doação!
+        </MudText>
+        <MudText Typo="Typo.body1" Class="mb-4" Style="color:#555;">
+            Sua contribuição faz a diferença na vida de muitas pessoas.
+        </MudText>
+
+        <MudPaper Class="pa-6 mb-4" Elevation="2" Style="border-radius:16px; text-align:left;">
+            <MudText Typo="Typo.overline" Style="color:#888;">Comprovante de doação</MudText>
+
+            <MudDivider Class="my-2" />
+
+            <MudStack Spacing="2">
+                <div style="display:flex; justify-content:space-between;">
+                    <MudText Typo="Typo.body2" Style="color:#888;">Campanha</MudText>
+                    <MudText Typo="Typo.body2" Style="font-weight:600;">@_doacaoRealizada.TituloCampanha</MudText>
+                </div>
+                <div style="display:flex; justify-content:space-between;">
+                    <MudText Typo="Typo.body2" Style="color:#888;">Doador</MudText>
+                    <MudText Typo="Typo.body2" Style="font-weight:600;">@_doacaoRealizada.NomeUsuario</MudText>
+                </div>
+                <div style="display:flex; justify-content:space-between;">
+                    <MudText Typo="Typo.body2" Style="color:#888;">E-mail</MudText>
+                    <MudText Typo="Typo.body2" Style="font-weight:600;">@_doacaoRealizada.EmailUsuario</MudText>
+                </div>
+                <MudDivider />
+                <div style="display:flex; justify-content:space-between; align-items:baseline;">
+                    <MudText Typo="Typo.body1" Style="font-weight:600;">Valor doado</MudText>
+                    <MudText Typo="Typo.h5" Style="font-weight:700; color:#2E7D32;">
+                        R$ @_doacaoRealizada.Valor.ToString("N2", _culturaBR)
+                    </MudText>
+                </div>
+            </MudStack>
+        </MudPaper>
+
+        <MudStack Row="true" Justify="Justify.Center" Spacing="2">
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Primary"
+                       Style="border-radius:24px;"
+                       StartIcon="@Icons.Material.Filled.Campaign"
+                       Href="/campanhas">
+                Ver mais campanhas
+            </MudButton>
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       Style="border-radius:24px; font-weight:600;"
+                       StartIcon="@Icons.Material.Filled.VolunteerActivism"
+                       Href="/doacoes">
+                Minhas doações
+            </MudButton>
+        </MudStack>
+    </div>
+}
+else
+{
+    <!-- ═══════ Formulário de doação ═══════ -->
+    <MudGrid>
+
+        <!-- Card da campanha (informativo) -->
+        <MudItem xs="12" md="5">
+            <CampanhaCard Campanha="@_campanha" MostrarAcao="false" />
+        </MudItem>
+
+        <!-- Formulário de valor -->
+        <MudItem xs="12" md="7">
+            <MudPaper Class="pa-6" Elevation="2" Style="border-radius:16px;">
+
+                <MudText Typo="Typo.h5" Class="mb-1" Style="font-weight:700; color:#1B5E20;">
+                    Quanto você quer doar?
+                </MudText>
+                <MudText Typo="Typo.body2" Class="mb-4" Style="color:#666;">
+                    Toda contribuição, grande ou pequena, transforma vidas.
+                </MudText>
+
+                <!-- Atalhos de valor -->
+                <MudText Typo="Typo.caption" Class="mb-2" Style="color:#888;">Valores sugeridos</MudText>
+                <MudStack Row="true" Class="mb-4" Spacing="2">
+                    @foreach (var sugestao in _sugestoes)
+                    {
+                        <MudButton Variant="@(_valor == sugestao ? Variant.Filled : Variant.Outlined)"
+                                   Color="Color.Primary"
+                                   Size="Size.Small"
+                                   Style="border-radius:24px; min-width:64px;"
+                                   OnClick="@(() => _valor = sugestao)">
+                            R$ @sugestao.ToString("N0", _culturaBR)
+                        </MudButton>
+                    }
+                </MudStack>
+
+                @if (_erros.Count > 0)
+                {
+                    <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true">
+                        @foreach (var erro in _erros)
+                        {
+                            <div>@erro</div>
+                        }
+                    </MudAlert>
+                }
+
+                <MudForm @ref="_form" @bind-IsValid="_formValido">
+                    <MudNumericField @bind-Value="_valor"
+                                     Label="Valor da doação (R$)"
+                                     Variant="Variant.Outlined"
+                                     Min="1m"
+                                     Format="N2"
+                                     Culture="@_culturaBR"
+                                     Adornment="Adornment.Start"
+                                     AdornmentText="R$"
+                                     Required="true"
+                                     RequiredError="Informe o valor da doação."
+                                     Validation="@(new Func<decimal, string?>(ValidarValor))"
+                                     Class="mb-6"
+                                     Disabled="@_doando" />
+
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               FullWidth="true"
+                               Size="Size.Large"
+                               Style="border-radius:24px; font-weight:600;"
+                               StartIcon="@Icons.Material.Filled.Favorite"
+                               OnClick="DoarAsync"
+                               Disabled="@_doando">
+                        @if (_doando)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                            <span>Processando...</span>
+                        }
+                        else
+                        {
+                            <span>Confirmar doação de R$ @_valor.ToString("N2", _culturaBR)</span>
+                        }
+                    </MudButton>
+
+                </MudForm>
+
+                <MudButton Variant="Variant.Text"
+                           Color="Color.Default"
+                           StartIcon="@Icons.Material.Filled.ArrowBack"
+                           Class="mt-3"
+                           OnClick="@(() => Nav.NavigateTo("/campanhas"))">
+                    Voltar às campanhas
+                </MudButton>
+
+            </MudPaper>
+        </MudItem>
+
+    </MudGrid>
+}
+
+@code {
+    [SupplyParameterFromQuery(Name = "campanha")]
+    private Guid GuidCampanha { get; set; }
+
+    private CampanhaPublicaResponse? _campanha;
+    private DoacaoRealizadaDto? _doacaoRealizada;
+    private MudForm _form = default!;
+    private bool _formValido;
+    private decimal _valor = 10m;
+    private bool _carregando = true;
+    private bool _doando;
+    private List<string> _erros = new();
+
+    private readonly decimal[] _sugestoes = { 10m, 25m, 50m, 100m };
+
+    private static readonly System.Globalization.CultureInfo _culturaBR =
+        new("pt-BR");
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (GuidCampanha == Guid.Empty)
+        {
+            Nav.NavigateTo("/campanhas");
+            return;
+        }
+
+        _carregando = true;
+
+        var campanhas = await CampanhaService.ObterCampanhasAtivasAsync(pagina: 1, tamanhoPagina: 100);
+        _campanha = campanhas.FirstOrDefault(c => c.Guid == GuidCampanha);
+
+        _carregando = false;
+    }
+
+    private static string? ValidarValor(decimal valor)
+    {
+        if (valor <= 0)
+            return "O valor deve ser maior que zero.";
+        return null;
+    }
+
+    private async Task DoarAsync()
+    {
+        await _form.Validate();
+        if (!_formValido) return;
+
+        _doando = true;
+        _erros = new();
+
+        var (sucesso, doacao, erros) = await DoacaoSvc.CriarDoacaoAsync(GuidCampanha, _valor);
+
+        if (sucesso)
+            _doacaoRealizada = doacao;
+        else
+            _erros = erros;
+
+        _doando = false;
+    }
+}
