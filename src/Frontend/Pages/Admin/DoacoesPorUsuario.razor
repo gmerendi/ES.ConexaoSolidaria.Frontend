@@ -1,24 +1,23 @@
 ﻿@page "/doacoes/usuario"
 @attribute [Authorize(Roles = "GESTOR_ONG")]
-@inject UsuarioService UsuarioSvc
 @inject DoacaoService DoacaoSvc
 
 <PageTitle>Doações por Usuário — Conexão Solidária</PageTitle>
 
 <MudText Typo="Typo.h4" Class="mb-1">Doações por Usuário</MudText>
 <MudText Typo="Typo.body2" Class="mb-5" Style="color:#666;">
-    Pesquise um usuário pelo e-mail e visualize todas as doações realizadas por ele.
+    Pesquise pelo e-mail do usuário para visualizar todas as doações realizadas por ele.
 </MudText>
 
 <MudGrid Spacing="4">
 
-    <!-- ═══════ Coluna esquerda — busca de usuário ═══════ -->
+    <!-- ═══════ Coluna esquerda — busca ═══════ -->
     <MudItem xs="12" md="4">
         <MudPaper Class="pa-6" Elevation="2" Style="border-radius:16px;">
 
             <MudText Typo="Typo.h6" Class="mb-3" Style="font-weight:700; color:#1B5E20;">
                 <MudIcon Icon="@Icons.Material.Filled.PersonSearch" Class="mr-1" Style="vertical-align:middle;" />
-                Buscar Usuário
+                Buscar por E-mail
             </MudText>
 
             <MudStack Row="true" AlignItems="AlignItems.End" Spacing="2" Class="mb-3">
@@ -38,50 +37,30 @@
                     {
                         <MudProgressCircular Size="Size.Small" Indeterminate="true" />
                     }
-                    else
-                    {
-
-                        <span>Buscar</span>
-                    }
+                    else { <span>Buscar</span> }
                 </MudButton>
             </MudStack>
 
-            @if (_errosBusca.Count > 0)
+            @if (_erros.Count > 0)
             {
-                <MudAlert Severity="Severity.Error" Dense="true" Class="mb-3">
-                    @foreach (var e in _errosBusca)
-                    {
-                        <div>@e</div>
-                    }
+                <MudAlert Severity="Severity.Error" Dense="true">
+                    @foreach (var e in _erros) { <div>@e</div> }
                 </MudAlert>
-            }
-
-            @if (_usuario is not null)
-            {
-                <MudDivider Class="mb-3" />
-                <MudStack Spacing="2">
-                    <DadosUsuarioRow Label="Nome" Valor="@_usuario.NomeCompleto" />
-                    <DadosUsuarioRow Label="E-mail" Valor="@_usuario.Email" />
-                    <DadosUsuarioRow Label="CPF" Valor="@_usuario.Cpf" />
-                    <DadosUsuarioRow Label="Perfil" Valor="@_usuario.Perfil" />
-                    <DadosUsuarioRow Label="Status" Valor="@_usuario.Status"
-                                     CorValor="@(_usuario.Status == "ACTIVE" ? "#2E7D32" : "#C62828")" />
-                </MudStack>
             }
 
         </MudPaper>
     </MudItem>
 
-    <!-- ═══════ Coluna direita — doações do usuário ═══════ -->
+    <!-- ═══════ Coluna direita — doações ═══════ -->
     <MudItem xs="12" md="8">
         <MudPaper Class="pa-6" Elevation="2" Style="border-radius:16px; min-height:300px;">
 
-            @if (_usuario is null)
+            @if (!_buscaRealizada)
             {
                 <div style="text-align:center; padding:3rem 0; color:#bbb;">
                     <MudIcon Icon="@Icons.Material.Filled.Favorite" Style="font-size:3rem;" />
                     <MudText Typo="Typo.body2" Class="mt-2">
-                        Pesquise um usuário para ver as doações.
+                        Informe um e-mail para ver as doações.
                     </MudText>
                 </div>
             }
@@ -90,32 +69,23 @@
                 <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:1rem;">
                     <div>
                         <MudText Typo="Typo.h6" Style="font-weight:700; color:#1B5E20;">
-                            @_usuario.NomeCompleto
+                            @_emailBuscado
                         </MudText>
                         <MudText Typo="Typo.caption" Style="color:#888;">
                             @_doacoes.Count doação(ões) •
                             Total: R$ @_doacoes.Sum(d => d.ValorDoacao).ToString("N2")
                         </MudText>
                     </div>
-                    @if (_carregandoDoacoes)
+                    @if (_buscando)
                     {
                         <MudProgressCircular Size="Size.Small" Color="Color.Primary" Indeterminate="true" />
                     }
                 </div>
 
-                @if (_errosDoacoes.Count > 0)
-                {
-                    <MudAlert Severity="Severity.Error" Dense="true" Class="mb-3">
-                        @foreach (var e in _errosDoacoes)
-                        {
-                            <div>@e</div>
-                        }
-                    </MudAlert>
-                }
-                else if (!_doacoes.Any() && !_carregandoDoacoes)
+                @if (!_doacoes.Any() && !_buscando)
                 {
                     <MudAlert Severity="Severity.Info" Dense="true">
-                        Este usuário ainda não realizou nenhuma doação.
+                        Nenhuma doação encontrada para este e-mail.
                     </MudAlert>
                 }
                 else
@@ -126,7 +96,7 @@
                             <div @onclick="@(() => AbrirDetalhe(d))"
                                  class="doacao-row"
                                  style="padding:12px 16px; cursor:pointer; border-bottom:1px solid #F0F0F0;
-                                display:flex; justify-content:space-between; align-items:center;">
+                                        display:flex; justify-content:space-between; align-items:center;">
                                 <div>
                                     <MudText Typo="Typo.body2" Style="font-weight:600;">@d.TituloCampanha</MudText>
                                     <MudText Typo="Typo.caption" Style="color:#888;">@d.DataDoacao</MudText>
@@ -139,7 +109,6 @@
                     </div>
                 }
             }
-
         </MudPaper>
     </MudItem>
 
@@ -161,17 +130,13 @@
             var d = _doacaoDetalhada;
             <MudStack Spacing="3">
                 <MudDivider />
-
                 <MudText Typo="Typo.overline" Style="color:#888; font-weight:600;">Campanha</MudText>
                 <DadosUsuarioRow Label="Título" Valor="@d.TituloCampanha" />
-                <DadosUsuarioRow Label="GUID" Valor="@d.GuidCampanha.ToString()" />
-
+                <DadosUsuarioRow Label="GUID"   Valor="@d.GuidCampanha.ToString()" />
                 <MudDivider />
-
                 <MudText Typo="Typo.overline" Style="color:#888; font-weight:600;">Doação</MudText>
-                <DadosUsuarioRow Label="Valor" Valor="@($"R$ {d.ValorDoacao.ToString("N2")}")"
-                                 CorValor="#2E7D32" />
-                <DadosUsuarioRow Label="Data" Valor="@d.DataDoacao" />
+                <DadosUsuarioRow Label="Valor"  Valor="@($"R$ {d.ValorDoacao.ToString("N2")}")" CorValor="#2E7D32" />
+                <DadosUsuarioRow Label="Data"   Valor="@d.DataDoacao" />
             </MudStack>
         }
     </DialogContent>
@@ -185,63 +150,36 @@
 </MudDialog>
 
 <style>
-    .doacao-row:hover {
-        background: #F5F5F5;
-    }
+    .doacao-row:hover { background: #F5F5F5; }
 </style>
 
 @code {
-    // ═══ Busca de usuário ═══
-    private string _email = string.Empty;
-    private bool _buscando;
-    private UsuarioDto? _usuario;
-    private List<string> _errosBusca = new();
-
-    // ═══ Doações ═══
-    private List<DoacaoCampanhaDto> _doacoes = new();
-    private bool _carregandoDoacoes;
-    private List<string> _errosDoacoes = new();
-
-    // ═══ Modal ═══
-    private bool _modalAberto;
-    private DoacaoCampanhaDto? _doacaoDetalhada;
+    private string                  _email         = string.Empty;
+    private string                  _emailBuscado  = string.Empty;
+    private bool                    _buscando;
+    private bool                    _buscaRealizada;
+    private List<DoacaoCampanhaDto> _doacoes       = new();
+    private List<string>            _erros         = new();
+    private bool                    _modalAberto;
+    private DoacaoCampanhaDto?      _doacaoDetalhada;
 
     private async Task BuscarAsync()
     {
         if (string.IsNullOrWhiteSpace(_email)) return;
 
-        _buscando = true;
-        _usuario = null;
-        _doacoes = new();
-        _errosBusca = new();
-        _errosDoacoes = new();
+        _buscando       = true;
+        _buscaRealizada = false;
+        _doacoes        = new();
+        _erros          = new();
+        _emailBuscado   = _email.Trim();
 
-        var (sucesso, usuario, erros) = await UsuarioSvc.ObterPorEmailAsync(_email.Trim());
+        var (sucesso, doacoes, erros) = await DoacaoSvc.ObterPorUsuarioAsync(_emailBuscado);
 
-        if (sucesso && usuario is not null)
-        {
-            _usuario = usuario;
-            await CarregarDoacoesAsync(usuario.Guid);
-        }
-        else
-        {
-            _errosBusca = erros;
-        }
+        _buscaRealizada = true;
+        if (sucesso) _doacoes = doacoes;
+        else         _erros   = erros;
 
         _buscando = false;
-    }
-
-    private async Task CarregarDoacoesAsync(Guid guidUsuario)
-    {
-        _carregandoDoacoes = true;
-        _errosDoacoes = new();
-
-        var (sucesso, doacoes, erros) = await DoacaoSvc.ObterPorUsuarioAsync(guidUsuario);
-
-        if (sucesso) _doacoes = doacoes;
-        else _errosDoacoes = erros;
-
-        _carregandoDoacoes = false;
     }
 
     private async Task BuscarSeEnter(KeyboardEventArgs e)
@@ -252,6 +190,6 @@
     private void AbrirDetalhe(DoacaoCampanhaDto doacao)
     {
         _doacaoDetalhada = doacao;
-        _modalAberto = true;
+        _modalAberto     = true;
     }
 }

@@ -16,12 +16,12 @@ public class DoacaoService
         _authSvc = authSvc;
     }
 
-    public async Task<(bool Sucesso, List<DoacaoCampanhaDto> Doacoes, List<string> Erros)> ObterPorUsuarioAsync(Guid guidUsuario)
+    public async Task<(bool Sucesso, List<DoacaoCampanhaDto> Doacoes, List<string> Erros)> ObterPorUsuarioAsync(string email)
     {
         try
         {
             using var request = new HttpRequestMessage(HttpMethod.Get,
-                $"/api/v1/Doacoes/usuario?GuidUsuario={guidUsuario}");
+                $"/api/v1/Doacoes/usuario?Email={Uri.EscapeDataString(email)}");
 
             var token = await _authSvc.ObterTokenAsync();
             if (!string.IsNullOrEmpty(token))
