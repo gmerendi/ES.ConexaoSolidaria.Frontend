@@ -21,7 +21,7 @@ public class CampanhaPublicaService
     {
         try
         {
-            var url = $"/api/v1/Campanhas/todas?Pagina={pagina}&TamanhoPagina={tamanhoPagina}";
+            var url = $"api/v1/Campanhas/todas?Pagina={pagina}&TamanhoPagina={tamanhoPagina}";
             var response = await _http.GetFromJsonAsync<ObterTodasCampanhasResponse>(url);
             return response?.Campanhas?.ToList() ?? new List<CampanhaPublicaResponse>();
         }

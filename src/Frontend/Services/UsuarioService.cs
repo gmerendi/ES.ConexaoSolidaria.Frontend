@@ -26,7 +26,7 @@ public class UsuarioService
     {
         try
         {
-            var url = $"/api/v1/usuario?Email={Uri.EscapeDataString(email)}";
+            var url = $"api/v1/usuario?Email={Uri.EscapeDataString(email)}";
             using var request = new HttpRequestMessage(HttpMethod.Get, url);
             await AnexarTokenAsync(request);
 
@@ -56,7 +56,7 @@ public class UsuarioService
     {
         try
         {
-            var url = $"/api/v1/usuario/alterar?NomeCompleto={Uri.EscapeDataString(nomeCompleto)}&Cpf={Uri.EscapeDataString(cpf)}";
+            var url = $"api/v1/usuario/alterar?NomeCompleto={Uri.EscapeDataString(nomeCompleto)}&Cpf={Uri.EscapeDataString(cpf)}";
             using var request = new HttpRequestMessage(HttpMethod.Put, url);
             await AnexarTokenAsync(request);
 
@@ -88,7 +88,7 @@ public class UsuarioService
     {
         try
         {
-            var url = $"/api/v1/usuario?Email={Uri.EscapeDataString(email)}";
+            var url = $"api/v1/usuario?Email={Uri.EscapeDataString(email)}";
             using var request = new HttpRequestMessage(HttpMethod.Delete, url);
             await AnexarTokenAsync(request);
 
@@ -106,16 +106,16 @@ public class UsuarioService
     }
 
     public async Task<(bool Sucesso, List<string> Mensagens)> SuspenderAsync(string email) =>
-        await ExecutarAcaoAdminAsync($"/api/v1/usuario/suspender?Email={Uri.EscapeDataString(email)}", HttpMethod.Put);
+        await ExecutarAcaoAdminAsync($"api/v1/usuario/suspender?Email={Uri.EscapeDataString(email)}", HttpMethod.Put);
 
     public async Task<(bool Sucesso, List<string> Mensagens)> AtivarAsync(string email) =>
-        await ExecutarAcaoAdminAsync($"/api/v1/usuario/ativar?Email={Uri.EscapeDataString(email)}", HttpMethod.Put);
+        await ExecutarAcaoAdminAsync($"api/v1/usuario/ativar?Email={Uri.EscapeDataString(email)}", HttpMethod.Put);
 
     public async Task<(bool Sucesso, List<string> Mensagens)> AlterarParaGestorAsync(string email) =>
-        await ExecutarAcaoAdminAsync($"/api/v1/usuario/alterar-para-gestor?Email={Uri.EscapeDataString(email)}", HttpMethod.Put);
+        await ExecutarAcaoAdminAsync($"api/v1/usuario/alterar-para-gestor?Email={Uri.EscapeDataString(email)}", HttpMethod.Put);
 
     public async Task<(bool Sucesso, List<string> Mensagens)> AlterarParaDoadorAsync(string email) =>
-        await ExecutarAcaoAdminAsync($"/api/v1/usuario/alterar-para-doador?Email={Uri.EscapeDataString(email)}", HttpMethod.Put);
+        await ExecutarAcaoAdminAsync($"api/v1/usuario/alterar-para-doador?Email={Uri.EscapeDataString(email)}", HttpMethod.Put);
 
     private async Task<(bool Sucesso, List<string> Mensagens)> ExecutarAcaoAdminAsync(string url, HttpMethod metodo)
     {

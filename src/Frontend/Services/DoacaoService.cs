@@ -21,7 +21,7 @@ public class DoacaoService
         try
         {
             using var request = new HttpRequestMessage(HttpMethod.Get,
-                $"/api/v1/Doacoes/usuario?Email={Uri.EscapeDataString(email)}");
+                $"api/v1/Doacoes/usuario?Email={Uri.EscapeDataString(email)}");
 
             var token = await _authSvc.ObterTokenAsync();
             if (!string.IsNullOrEmpty(token))
@@ -49,7 +49,7 @@ public class DoacaoService
         try
         {
             using var request = new HttpRequestMessage(HttpMethod.Get,
-                $"/api/v1/Doacoes/campanha?GuidCampanha={guidCampanha}");
+                $"api/v1/Doacoes/campanha?GuidCampanha={guidCampanha}");
 
             var token = await _authSvc.ObterTokenAsync();
             if (!string.IsNullOrEmpty(token))
@@ -76,7 +76,7 @@ public class DoacaoService
     {
         try
         {
-            using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/Doacoes/self");
+            using var request = new HttpRequestMessage(HttpMethod.Get, "api/v1/Doacoes/self");
 
             var token = await _authSvc.ObterTokenAsync();
             if (!string.IsNullOrEmpty(token))
@@ -103,7 +103,7 @@ public class DoacaoService
     {
         try
         {
-            using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/Doacoes")
+            using var request = new HttpRequestMessage(HttpMethod.Post, "api/v1/Doacoes")
             {
                 Content = JsonContent.Create(new CriarDoacaoRequest(guidCampanha, valor))
             };

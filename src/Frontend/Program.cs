@@ -15,6 +15,9 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 // ── HttpClient apontando para o Gateway ──────────────────────────────────────
 var gatewayUrl = builder.Configuration["GatewayUrl"] ?? "";
 
+if (!gatewayUrl.EndsWith("/"))
+    gatewayUrl += "/";
+
 builder.Services.AddScoped(sp => new HttpClient
 {
     BaseAddress = new Uri(gatewayUrl)
