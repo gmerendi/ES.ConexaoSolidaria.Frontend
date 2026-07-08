@@ -25,7 +25,7 @@ public class CampanhaAdminService
     {
         try
         {
-            using var req = new HttpRequestMessage(HttpMethod.Post, "/api/v1/Campanhas")
+            using var req = new HttpRequestMessage(HttpMethod.Post, "api/v1/Campanhas")
             {
                 Content = JsonContent.Create(request)
             };
@@ -49,7 +49,7 @@ public class CampanhaAdminService
         try
         {
             using var req = new HttpRequestMessage(HttpMethod.Get,
-                $"/api/v1/Campanhas/busca?Termo={Uri.EscapeDataString(termo)}");
+                $"api/v1/Campanhas/busca?Termo={Uri.EscapeDataString(termo)}");
             await AnexarTokenAsync(req);
 
             var response = await _http.SendAsync(req);
@@ -75,7 +75,7 @@ public class CampanhaAdminService
         try
         {
             using var req = new HttpRequestMessage(HttpMethod.Get,
-                $"/api/v1/Campanhas?Guid={guid}");
+                $"api/v1/Campanhas?Guid={guid}");
             await AnexarTokenAsync(req);
 
             var response = await _http.SendAsync(req);
@@ -98,16 +98,16 @@ public class CampanhaAdminService
     }
 
     public async Task<(bool Sucesso, List<string> Mensagens)> CancelarAsync(Guid guid) =>
-        await ExecutarAcaoAsync($"/api/v1/Campanhas/cancel?Guid={guid}", HttpMethod.Put);
+        await ExecutarAcaoAsync($"api/v1/Campanhas/cancel?Guid={guid}", HttpMethod.Put);
 
     public async Task<(bool Sucesso, List<string> Mensagens)> ConcluirAsync(Guid guid) =>
-        await ExecutarAcaoAsync($"/api/v1/Campanhas/concluir?Guid={guid}", HttpMethod.Put);
+        await ExecutarAcaoAsync($"api/v1/Campanhas/concluir?Guid={guid}", HttpMethod.Put);
 
     public async Task<(bool Sucesso, List<string> Mensagens)> AlterarAsync(AlterarCampanhaRequest request)
     {
         try
         {
-            using var req = new HttpRequestMessage(HttpMethod.Put, "/api/v1/Campanhas")
+            using var req = new HttpRequestMessage(HttpMethod.Put, "api/v1/Campanhas")
             {
                 Content = JsonContent.Create(request)
             };

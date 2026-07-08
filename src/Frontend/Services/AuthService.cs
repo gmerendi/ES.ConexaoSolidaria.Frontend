@@ -24,7 +24,7 @@ public class AuthService
     {
         try
         {
-            var response = await _http.PostAsJsonAsync("/api/v1/auth/login", request);
+            var response = await _http.PostAsJsonAsync("api/v1/auth/login", request);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -66,7 +66,7 @@ public class AuthService
             var token = await _localStorage.GetItemAsync<string>(TokenKey);
             if (!string.IsNullOrEmpty(token))
             {
-                using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/logout");
+                using var request = new HttpRequestMessage(HttpMethod.Post, "api/v1/auth/logout");
                 request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
                 await _http.SendAsync(request);
             }
@@ -100,7 +100,7 @@ public class AuthService
         {
             var token = await ObterTokenAsync();
 
-            using var request = new HttpRequestMessage(HttpMethod.Put, "/api/v1/auth/reset-password")
+            using var request = new HttpRequestMessage(HttpMethod.Put, "api/v1/auth/reset-password")
             {
                 Content = JsonContent.Create(new ResetSenhaRequest(senhaAtual, senhaNova))
             };
@@ -130,7 +130,7 @@ public class AuthService
     {
         try
         {
-            var response = await _http.PostAsJsonAsync("/api/v1/usuario", request);
+            var response = await _http.PostAsJsonAsync("api/v1/usuario", request);
             var conteudo = await response.Content.ReadAsStringAsync();
 
             return response.IsSuccessStatusCode
