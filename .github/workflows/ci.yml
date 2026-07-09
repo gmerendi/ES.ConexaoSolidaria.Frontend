@@ -1,0 +1,47 @@
+﻿name: CI - Build
+
+on:
+  push:
+    branches: [develop, main]
+  pull_request:
+    branches: [develop, main]
+  workflow_call:
+
+env:
+  DOTNET_VERSION: '9.0.x'
+  SOLUTION_PATH: 'ES.ConexaoSolidaria.Frontend.slnx'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Configurar .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Cache de pacotes NuGet
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Restaurar dependências
+        run: dotnet restore ${{ env.SOLUTION_PATH }}
+
+      - name: Build
+        run: dotnet build ${{ env.SOLUTION_PATH }} --no-restore --configuration Release
+
+      - name: Publish (valida geração do build de produção)
+        run: dotnet publish src/Frontend/Frontend.csproj --no-restore --configuration Release -o ./publish-output
+
+      # Nota: este repositório não tem testes automatizados (0% de cobertura, confirmado
+      # em análise anterior). Este CI garante apenas que o projeto compila e publica
+      # corretamente. Recomenda-se adicionar testes (ex: bUnit para componentes Blazor)
+      # como item de dívida técnica.
