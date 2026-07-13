@@ -5,4 +5,7 @@
   <Folder Name="/src/">
     <Project Path="src/Frontend/Frontend.csproj" Id="ec36a17a-af0a-444e-96ac-d0f7e485766d" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Frontend.Tests/Frontend.Tests.csproj" Id="3aed030c-04a6-4396-80c9-26a50b00000a" />
+  </Folder>
 </Solution>
