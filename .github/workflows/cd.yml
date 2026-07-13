@@ -1,4 +1,4 @@
-﻿﻿name: CD - Build, Push & Deploy
+﻿name: CD - Build, Push & Deploy
 
 on:
   push:
@@ -31,7 +31,7 @@ jobs:
       - name: Checkout Infra (manifests K8s)
         uses: actions/checkout@v4
         with:
-          repository: gmerendi/ES.ConexaoSolidaria.Frontend
+          repository: gmerendi/ES.ConexaoSolidaria.Infra
           token: ${{ secrets.INFRA_REPO_TOKEN }}
           ref: develop
           path: infra
