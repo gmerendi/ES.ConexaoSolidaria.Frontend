@@ -1,4 +1,4 @@
-﻿name: CI - Build
+﻿name: CI - Build & Test
 
 on:
   push:
@@ -12,7 +12,7 @@ env:
   SOLUTION_PATH: 'ES.ConexaoSolidaria.Frontend.slnx'
 
 jobs:
-  build:
+  build-and-test:
     runs-on: ubuntu-latest
 
     steps:
@@ -38,10 +38,19 @@ jobs:
       - name: Build
         run: dotnet build ${{ env.SOLUTION_PATH }} --no-restore --configuration Release
 
-      - name: Publish (valida geração do build de produção)
-        run: dotnet publish src/Frontend/Frontend.csproj --no-restore --configuration Release -o ./publish-output
+      - name: Testes unitários
+        run: dotnet test ${{ env.SOLUTION_PATH }} --no-build --configuration Release --verbosity normal --logger "trx;LogFileName=test-results.trx" --collect:"XPlat Code Coverage"
 
-      # Nota: este repositório não tem testes automatizados (0% de cobertura, confirmado
-      # em análise anterior). Este CI garante apenas que o projeto compila e publica
-      # corretamente. Recomenda-se adicionar testes (ex: bUnit para componentes Blazor)
-      # como item de dívida técnica.
+      - name: Publicar resultados de teste
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: '**/test-results.trx'
+
+      - name: Publicar cobertura de código
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: '**/coverage.cobertura.xml'
