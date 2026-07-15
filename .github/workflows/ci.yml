@@ -67,7 +67,7 @@ jobs:
       # 3. IMAGEM DOCKER ---------------------------------------------------------------------------
       - name: Build da imagem Docker local
         run: |
-          docker build -t ${{ env.IMAGE_NAME }} -f src/ConexaoSolidaria.Frontend/Dockerfile .
+          docker build -t ${{ env.IMAGE_NAME }} -f src/Frontend/Dockerfile .
 
       # 4. TESTE VULNERABILIDADES ------------------------------------------------------------------
       - name: Escaneamento de vulnerabilidades (Trivy)
