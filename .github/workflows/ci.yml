@@ -1,4 +1,4 @@
-﻿name: CI - Build & Test
+name: CI - Build & Test
 
 on:
   push:
@@ -10,6 +10,13 @@ on:
 env:
   DOTNET_VERSION: '9.0.x'
   SOLUTION_PATH: 'ES.ConexaoSolidaria.Frontend.slnx'
+  IMAGE_NAME: 'conexao-solidaria-frontend:test'
+
+# ── PERMISSOES NECESSARIAS PARA SEGURANCA ──────────────────────────
+permissions:
+  contents: read           # Permite que o checkout leia o seu código
+  security-events: write   # Obrigatório para fazer o upload do relatório SARIF do Trivy
+# ───────────────────────────────────────────────────────────────────
 
 jobs:
   build-and-test:
@@ -38,9 +45,11 @@ jobs:
       - name: Build
         run: dotnet build ${{ env.SOLUTION_PATH }} --no-restore --configuration Release
 
+      # 1. TESTES UNITARIOS --------------------------------------------------------------------------
       - name: Testes unitários
         run: dotnet test ${{ env.SOLUTION_PATH }} --no-build --configuration Release --verbosity normal --logger "trx;LogFileName=test-results.trx" --collect:"XPlat Code Coverage"
 
+      # 2. SALVA OS ARTEFATOS IMEDIATAMENTE ---------------------------------------------------------
       - name: Publicar resultados de teste
         if: always()
         uses: actions/upload-artifact@v4
@@ -54,3 +63,25 @@ jobs:
         with:
           name: coverage-report
           path: '**/coverage.cobertura.xml'
+
+      # 3. IMAGEM DOCKER ---------------------------------------------------------------------------
+      - name: Build da imagem Docker local
+        run: |
+          docker build -t ${{ env.IMAGE_NAME }} -f src/ConexaoSolidaria.Frontend/Dockerfile .
+
+      # 4. TESTE VULNERABILIDADES ------------------------------------------------------------------
+      - name: Escaneamento de vulnerabilidades (Trivy)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.IMAGE_NAME }}
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'HIGH,CRITICAL'
+          exit-code: '0'
+
+      - name: Publicar relatório de segurança
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-report
+          path: 'trivy-results.sarif'
