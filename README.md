@@ -112,7 +112,11 @@ A URL do Gateway é definida em `wwwroot/appsettings.json` (compilada junto com 
 
 ## Testes
 
-Este repositório ainda não possui um projeto de testes automatizados.
+```
+dotnet test
+```
+
+Os testes de unidade (xUnit) estão em tests/Frontend.Test e cobrem a autorização e serviços utilizados nas telas.
 
 ## Estrutura do Projeto
 
