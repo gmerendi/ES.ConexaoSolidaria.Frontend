@@ -37,14 +37,20 @@
                     {
                         <MudProgressCircular Size="Size.Small" Indeterminate="true" />
                     }
-                    else { <span>Buscar</span> }
+                    else
+                    {
+                        <span>Buscar</span>
+                    }
                 </MudButton>
             </MudStack>
 
             @if (_erros.Count > 0)
             {
                 <MudAlert Severity="Severity.Error" Dense="true">
-                    @foreach (var e in _erros) { <div>@e</div> }
+                    @foreach (var e in _erros)
+                    {
+                        <div>@e</div>
+                    }
                 </MudAlert>
             }
 
@@ -73,7 +79,7 @@
                         </MudText>
                         <MudText Typo="Typo.caption" Style="color:#888;">
                             @_doacoes.Count doação(ões) •
-                            Total: R$ @_doacoes.Sum(d => d.ValorDoacao).ToString("N2")
+                            Total aprovado: R$ @_totalAprovado.ToString("N2", _culturaBR)
                         </MudText>
                     </div>
                     @if (_buscando)
@@ -96,14 +102,23 @@
                             <div @onclick="@(() => AbrirDetalhe(d))"
                                  class="doacao-row"
                                  style="padding:12px 16px; cursor:pointer; border-bottom:1px solid #F0F0F0;
-                                        display:flex; justify-content:space-between; align-items:center;">
+                                display:flex; justify-content:space-between; align-items:center;">
                                 <div>
                                     <MudText Typo="Typo.body2" Style="font-weight:600;">@d.TituloCampanha</MudText>
                                     <MudText Typo="Typo.caption" Style="color:#888;">@d.DataDoacao</MudText>
                                 </div>
-                                <MudText Typo="Typo.body1" Style="font-weight:700; color:#2E7D32;">
-                                    R$ @d.ValorDoacao.ToString("N2")
-                                </MudText>
+                                <div style="display:flex; align-items:center; gap:12px;">
+                                    <MudChip T="string"
+                                             Color="@ObterCorStatus(d.StatusDoacao)"
+                                             Variant="Variant.Filled"
+                                             Size="Size.Small"
+                                             Style="font-weight:600;">
+                                        @d.StatusDoacao
+                                    </MudChip>
+                                    <MudText Typo="Typo.body1" Style="font-weight:700; color:#2E7D32;">
+                                        R$ @d.ValorDoacao.ToString("N2", _culturaBR)
+                                    </MudText>
+                                </div>
                             </div>
                         }
                     </div>
@@ -132,11 +147,24 @@
                 <MudDivider />
                 <MudText Typo="Typo.overline" Style="color:#888; font-weight:600;">Campanha</MudText>
                 <DadosUsuarioRow Label="Título" Valor="@d.TituloCampanha" />
-                <DadosUsuarioRow Label="GUID"   Valor="@d.GuidCampanha.ToString()" />
+                <DadosUsuarioRow Label="GUID" Valor="@d.GuidCampanha.ToString()" />
+
                 <MudDivider />
                 <MudText Typo="Typo.overline" Style="color:#888; font-weight:600;">Doação</MudText>
-                <DadosUsuarioRow Label="Valor"  Valor="@($"R$ {d.ValorDoacao.ToString("N2")}")" CorValor="#2E7D32" />
-                <DadosUsuarioRow Label="Data"   Valor="@d.DataDoacao" />
+                <DadosUsuarioRow Label="Valor" Valor="@($"R$ {d.ValorDoacao.ToString("N2", _culturaBR)}")" CorValor="#2E7D32" />
+
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <MudText Typo="Typo.body2" Style="color:#666;">Status</MudText>
+                    <MudChip T="string"
+                             Color="@ObterCorStatus(d.StatusDoacao)"
+                             Variant="Variant.Filled"
+                             Size="Size.Small"
+                             Style="font-weight:600;">
+                        @d.StatusDoacao
+                    </MudChip>
+                </div>
+
+                <DadosUsuarioRow Label="Data" Valor="@d.DataDoacao" />
             </MudStack>
         }
     </DialogContent>
@@ -150,34 +178,43 @@
 </MudDialog>
 
 <style>
-    .doacao-row:hover { background: #F5F5F5; }
+    .doacao-row:hover {
+        background: #F5F5F5;
+    }
 </style>
 
 @code {
-    private string                  _email         = string.Empty;
-    private string                  _emailBuscado  = string.Empty;
-    private bool                    _buscando;
-    private bool                    _buscaRealizada;
-    private List<DoacaoCampanhaDto> _doacoes       = new();
-    private List<string>            _erros         = new();
-    private bool                    _modalAberto;
-    private DoacaoCampanhaDto?      _doacaoDetalhada;
+    private string _email = string.Empty;
+    private string _emailBuscado = string.Empty;
+    private bool _buscando;
+    private bool _buscaRealizada;
+    private List<DoacaoCampanhaDto> _doacoes = new();
+    private List<string> _erros = new();
+    private bool _modalAberto;
+    private DoacaoCampanhaDto? _doacaoDetalhada;
+
+    // Cálculo acumulado apenas das doações APROVADAS
+    private decimal _totalAprovado => _doacoes
+        .Where(d => d.StatusDoacao.ToString().ToUpper().Contains("APROVADA") || d.StatusDoacao.ToString() == "1")
+        .Sum(d => d.ValorDoacao);
+
+    private static readonly System.Globalization.CultureInfo _culturaBR = new("pt-BR");
 
     private async Task BuscarAsync()
     {
         if (string.IsNullOrWhiteSpace(_email)) return;
 
-        _buscando       = true;
+        _buscando = true;
         _buscaRealizada = false;
-        _doacoes        = new();
-        _erros          = new();
-        _emailBuscado   = _email.Trim();
+        _doacoes = new();
+        _erros = new();
+        _emailBuscado = _email.Trim();
 
         var (sucesso, doacoes, erros) = await DoacaoSvc.ObterPorUsuarioAsync(_emailBuscado);
 
         _buscaRealizada = true;
         if (sucesso) _doacoes = doacoes;
-        else         _erros   = erros;
+        else _erros = erros;
 
         _buscando = false;
     }
@@ -190,6 +227,20 @@
     private void AbrirDetalhe(DoacaoCampanhaDto doacao)
     {
         _doacaoDetalhada = doacao;
-        _modalAberto     = true;
+        _modalAberto = true;
+    }
+
+    // Mapeamento dinâmico de cores do status
+    private Color ObterCorStatus(object status)
+    {
+        var statusStr = status?.ToString()?.ToUpper() ?? "";
+
+        if (statusStr.Contains("APROVADA") || statusStr == "1")
+            return Color.Success; // Verde
+
+        if (statusStr.Contains("RECUSADA") || statusStr.Contains("REPROVADA") || statusStr == "2")
+            return Color.Error; // Vermelho
+
+        return Color.Default; // Cinza/Padrão (Processando)
     }
 }
