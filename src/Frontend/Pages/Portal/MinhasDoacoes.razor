@@ -2,7 +2,7 @@
 @attribute [Authorize]
 @inject DoacaoService DoacaoSvc
 
-<PageTitle>Minhas Doações — Esperanca Solidaria</PageTitle>
+<PageTitle>Minhas Doações — Esperança Solidária</PageTitle>
 
 <MudText Typo="Typo.h4" Class="mb-1">Minhas Doações</MudText>
 <MudText Typo="Typo.body2" Class="mb-4" Style="color:#666;">
@@ -49,6 +49,7 @@ else
                 <MudTh>Campanha</MudTh>
                 <MudTh>Valor doado</MudTh>
                 <MudTh>Data da doação</MudTh>
+                <MudTh>Status</MudTh>
             </HeaderContent>
             <RowTemplate>
                 <MudTd DataLabel="Campanha">@context.TituloCampanha</MudTd>
@@ -58,13 +59,22 @@ else
                     </MudText>
                 </MudTd>
                 <MudTd DataLabel="Data da doação">@context.DataDoacao</MudTd>
+                <MudTd DataLabel="Status">
+                    <!-- Opção com Chip colorido -->
+                    <MudChip T="string"
+                             Color="@ObterCorStatus(context.StatusDoacao)"
+                             Variant="Variant.Filled"
+                             Size="Size.Small"
+                             Style="font-weight: 600;">
+                        @context.StatusDoacao
+                    </MudChip>
+                </MudTd>
             </RowTemplate>
         </MudTable>
     </MudPaper>
 
     <MudText Typo="Typo.body2" Class="mt-4" Style="color:#666;">
         Total doado: <strong style="color:#2E7D32;">R$ @_totalDoado.ToString("N2", _culturaBR)</strong>
-        
     </MudText>
 }
 
@@ -73,10 +83,11 @@ else
     private bool _carregando = true;
     private List<string> _erros = new();
 
-    private decimal _totalDoado => _doacoes.Sum(d => d.ValorDoacao);
+    private decimal _totalDoado => _doacoes
+        .Where(d => d.StatusDoacao.ToString().ToUpper().Contains("APROVADA"))
+        .Sum(d => d.ValorDoacao);
 
-    private static readonly System.Globalization.CultureInfo _culturaBR =
-        new("pt-BR");
+    private static readonly System.Globalization.CultureInfo _culturaBR = new("pt-BR");
 
     protected override async Task OnInitializedAsync()
     {
@@ -90,5 +101,19 @@ else
             _erros = erros;
 
         _carregando = false;
+    }
+
+    // Método responsável por mapear a cor dinamicamente
+    private Color ObterCorStatus(object status)
+    {
+        var statusStr = status?.ToString()?.ToUpper() ?? "";
+
+        if (statusStr.Contains("APROVADA") || statusStr == "1")
+            return Color.Success; // Verde
+
+        if (statusStr.Contains("RECUSADA") || statusStr.Contains("REPROVADA") || statusStr == "2")
+            return Color.Error; // Vermelho
+
+        return Color.Default; // Cinza (Processando ou outros)
     }
 }

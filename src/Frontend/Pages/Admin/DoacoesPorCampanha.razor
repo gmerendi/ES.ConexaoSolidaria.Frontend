@@ -39,7 +39,6 @@
                     }
                     else
                     {
-
                         <span>Buscar</span>
                     }
                 </MudButton>
@@ -115,7 +114,7 @@
                         </MudText>
                         <MudText Typo="Typo.caption" Style="color:#888;">
                             @_doacoes.Count doação(ões) •
-                            Total: R$ @_doacoes.Sum(d => d.ValorDoacao).ToString("N2", _culturaBR)
+                            Total aprovado: R$ @_totalAprovado.ToString("N2", _culturaBR)
                         </MudText>
                     </div>
                     @if (_carregandoDoacoes)
@@ -152,9 +151,18 @@
                                     <MudText Typo="Typo.body2" Style="font-weight:600;">@d.EmailUsuario</MudText>
                                     <MudText Typo="Typo.caption" Style="color:#888;">@d.DataDoacao</MudText>
                                 </div>
-                                <MudText Typo="Typo.body1" Style="font-weight:700; color:#2E7D32;">
-                                    R$ @d.ValorDoacao.ToString("N2", _culturaBR)
-                                </MudText>
+                                <div style="display:flex; align-items:center; gap:12px;">
+                                    <MudChip T="string"
+                                             Color="@ObterCorStatus(d.StatusDoacao)"
+                                             Variant="Variant.Filled"
+                                             Size="Size.Small"
+                                             Style="font-weight:600;">
+                                        @d.StatusDoacao
+                                    </MudChip>
+                                    <MudText Typo="Typo.body1" Style="font-weight:700; color:#2E7D32;">
+                                        R$ @d.ValorDoacao.ToString("N2", _culturaBR)
+                                    </MudText>
+                                </div>
                             </div>
                         }
                     </div>
@@ -196,8 +204,20 @@
                 <MudDivider />
 
                 <MudText Typo="Typo.overline" Style="color:#888; font-weight:600;">Doação</MudText>
-                <DadosUsuarioRow Label="Valor" Valor="@($"R$ {d.ValorDoacao.ToString("N2")}")"
+                <DadosUsuarioRow Label="Valor" Valor="@($"R$ {d.ValorDoacao.ToString("N2", _culturaBR)}")"
                                  CorValor="#2E7D32" />
+
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <MudText Typo="Typo.body2" Style="color:#666;">Status</MudText>
+                    <MudChip T="string"
+                             Color="@ObterCorStatus(d.StatusDoacao)"
+                             Variant="Variant.Filled"
+                             Size="Size.Small"
+                             Style="font-weight:600;">
+                        @d.StatusDoacao
+                    </MudChip>
+                </div>
+
                 <DadosUsuarioRow Label="Data" Valor="@d.DataDoacao" />
             </MudStack>
         }
@@ -230,6 +250,11 @@
     private List<DoacaoCampanhaDto> _doacoes = new();
     private bool _carregandoDoacoes;
     private List<string> _errosDoacoes = new();
+
+    // ═══ Cálculo acumulado apenas das doações APROVADAS ═══
+    private decimal _totalAprovado => _doacoes
+        .Where(d => d.StatusDoacao.ToString().ToUpper().Contains("APROVADA") || d.StatusDoacao.ToString() == "1")
+        .Sum(d => d.ValorDoacao);
 
     // ═══ Modal de detalhe ═══
     private bool _modalDoacaoAberto;
@@ -281,5 +306,19 @@
     {
         _doacaoDetalhada = doacao;
         _modalDoacaoAberto = true;
+    }
+
+    // Mapeamento dinâmico de cores do status
+    private Color ObterCorStatus(object status)
+    {
+        var statusStr = status?.ToString()?.ToUpper() ?? "";
+
+        if (statusStr.Contains("APROVADA") || statusStr == "1")
+            return Color.Success; // Verde
+
+        if (statusStr.Contains("RECUSADA") || statusStr.Contains("REPROVADA") || statusStr == "2")
+            return Color.Error; // Vermelho
+
+        return Color.Default; // Cinza/Padrão (Processando)
     }
 }

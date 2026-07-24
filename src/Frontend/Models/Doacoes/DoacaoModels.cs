@@ -4,7 +4,8 @@ public record DoacaoSelfDto(
     Guid GuidCampanha,
     string TituloCampanha,
     decimal ValorDoacao,
-    string DataDoacao);
+    string DataDoacao,
+    string StatusDoacao);
 
 public record ObterDoacoesSelfResponse(IEnumerable<DoacaoSelfDto> Doacoes);
 
@@ -16,7 +17,8 @@ public record DoacaoCampanhaDto(
     Guid GuidCampanha,
     string TituloCampanha,
     decimal ValorDoacao,
-    string DataDoacao);
+    string DataDoacao,
+    string StatusDoacao);
 
 public record ObterDoacoesCampanhaResponse(IEnumerable<DoacaoCampanhaDto> Doacoes);
 
@@ -27,4 +29,5 @@ public record DoacaoRealizadaDto(
     string TituloCampanha,
     string NomeUsuario,
     string EmailUsuario,
-    decimal Valor);
+    decimal Valor,
+    string Status);
