@@ -31,6 +31,28 @@
     <script src="_content/Blazored.LocalStorage/blazored-localstorage.js"></script>
     <script src="_content/MudBlazor/MudBlazor.min.js"></script>
     <script src="_framework/blazor.webassembly.js"></script>
+    <!-- Bibliotecas para geração do PDF no Navegador -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <script>
+        function baixarReciboPdf(elementId, nomeArquivo) {
+            const elemento = document.getElementById(elementId);
+            if (!elemento) {
+                console.error("Elemento para PDF não encontrado: " + elementId);
+                return;
+            }
+
+            const configuracoes = {
+                margin: 10,
+                filename: nomeArquivo,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true },
+                jsPDF: { unit: 'mm', format: 'a5', orientation: 'landscape' }
+            };
+
+            html2pdf().set(configuracoes).from(elemento).save();
+        }
+    </script>
 </body>
 
 </html>

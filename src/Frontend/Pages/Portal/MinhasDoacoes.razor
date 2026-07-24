@@ -1,19 +1,22 @@
 ﻿@page "/doacoes"
 @attribute [Authorize]
 @inject DoacaoService DoacaoSvc
+@inject IJSRuntime JS
+
+@using MudColor = MudBlazor.Color
 
 <PageTitle>Minhas Doações — Esperança Solidária</PageTitle>
 
 <MudText Typo="Typo.h4" Class="mb-1">Minhas Doações</MudText>
 <MudText Typo="Typo.body2" Class="mb-4" Style="color:#666;">
-    Histórico de contribuições realizadas por você.
+    Histórico de contribuições realizadas por você. Clique em uma linha para ver detalhes ou baixar o recibo.
 </MudText>
 
 @if (_carregando)
 {
     <div class="es-loading">
-        <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
-        <MudText Typo="Typo.body1" Class="mt-3" Color="Color.Primary">
+        <MudProgressCircular Color="MudColor.Primary" Size="Size.Large" Indeterminate="true" />
+        <MudText Typo="Typo.body1" Class="mt-3" Color="MudColor.Primary">
             Carregando suas doações...
         </MudText>
     </div>
@@ -33,7 +36,7 @@ else if (!_doacoes.Any())
         Você ainda não realizou nenhuma doação. Que tal apoiar uma campanha agora?
     </MudAlert>
     <MudButton Variant="Variant.Filled"
-               Color="Color.Primary"
+               Color="MudColor.Primary"
                Class="mt-4"
                StartIcon="@Icons.Material.Filled.Campaign"
                Style="border-radius:24px; font-weight:600;"
@@ -44,7 +47,7 @@ else if (!_doacoes.Any())
 else
 {
     <MudPaper Class="pa-2" Elevation="2" Style="border-radius:16px;">
-        <MudTable Items="@_doacoes" Hover="true" Dense="false" Striped="true" Elevation="0">
+        <MudTable Items="@_doacoes" Hover="true" Dense="false" Striped="true" Elevation="0" T="DoacaoSelfDto" OnRowClick="OnRowClick">
             <HeaderContent>
                 <MudTh>Campanha</MudTh>
                 <MudTh>Valor doado</MudTh>
@@ -52,15 +55,14 @@ else
                 <MudTh>Status</MudTh>
             </HeaderContent>
             <RowTemplate>
-                <MudTd DataLabel="Campanha">@context.TituloCampanha</MudTd>
-                <MudTd DataLabel="Valor doado">
+                <MudTd DataLabel="Campanha" Style="cursor:pointer;">@context.TituloCampanha</MudTd>
+                <MudTd DataLabel="Valor doado" Style="cursor:pointer;">
                     <MudText Style="font-weight:600; color:#2E7D32;">
                         R$ @context.ValorDoacao.ToString("N2", _culturaBR)
                     </MudText>
                 </MudTd>
-                <MudTd DataLabel="Data da doação">@context.DataDoacao</MudTd>
-                <MudTd DataLabel="Status">
-                    <!-- Opção com Chip colorido -->
+                <MudTd DataLabel="Data da doação" Style="cursor:pointer;">@context.DataDoacao</MudTd>
+                <MudTd DataLabel="Status" Style="cursor:pointer;">
                     <MudChip T="string"
                              Color="@ObterCorStatus(context.StatusDoacao)"
                              Variant="Variant.Filled"
@@ -78,13 +80,92 @@ else
     </MudText>
 }
 
+<!-- Modal — Detalhes da Doação -->
+<MudDialog @bind-Visible="_modalAberto" Options="@(new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, CloseOnEscapeKey = true })">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Favorite" Class="mr-2" Style="vertical-align:middle; color:#2E7D32;" />
+            Detalhes da Doação
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (_doacaoSelecionada is not null)
+        {
+            var d = _doacaoSelecionada;
+
+            <!-- CONTEÚDO QUE SERÁ TRANSFORMADO EM PDF -->
+            <div id="recibo-impressao" style="padding: 16px; background-color: #ffffff; font-family: Roboto, sans-serif; color: #333333;">
+                <div style="border-bottom: 2px solid #2E7D32; padding-bottom: 8px; margin-bottom: 16px;">
+                    <h2 style="margin: 0; color: #2E7D32; font-size: 20px;">ESPERANÇA SOLIDÁRIA</h2>
+                    <span style="font-size: 12px; color: #666666;">Comprovante de Doação</span>
+                </div>
+
+                <p style="font-size: 14px; margin-bottom: 8px;">Confirmamos o recebimento da doação no valor de:</p>
+
+                <div style="background-color: #E8F5E9; padding: 12px; border-radius: 8px; margin-bottom: 16px;">
+                    <span style="font-size: 24px; font-weight: bold; color: #2E7D32;">
+                        R$ @d.ValorDoacao.ToString("N2", _culturaBR)
+                    </span>
+                </div>
+
+                <div style="margin-bottom: 12px;">
+                    <span style="font-size: 12px; color: #888888; display: block; font-weight: bold;">CAMPANHA</span>
+                    <span style="font-size: 14px; font-weight: 600;">@d.TituloCampanha</span>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; border-top: 1px solid #eeeeee; padding-top: 8px; margin-top: 8px;">
+                    <span style="font-size: 12px; color: #666666;">Data:</span>
+                    <span style="font-size: 12px; font-weight: bold;">@d.DataDoacao</span>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; border-top: 1px solid #eeeeee; padding-top: 8px; margin-top: 8px;">
+                    <span style="font-size: 12px; color: #666666;">Status:</span>
+                    <span style="font-size: 12px; font-weight: bold; color: #2E7D32;">@d.StatusDoacao</span>
+                </div>
+
+                <div style="border-top: 1px solid #eeeeee; margin-top: 24px; padding-top: 8px; text-align: center;">
+                    <small style="color: #888888; font-size: 10px;">Muito obrigado pelo seu apoio e generosidade! • Esperança Solidária</small>
+                </div>
+            </div>
+        }
+    </DialogContent>
+    <DialogActions>
+        @if (_doacaoSelecionada is not null && EhAprovada(_doacaoSelecionada.StatusDoacao))
+        {
+            <MudButton Variant="Variant.Filled"
+                       Color="MudColor.Success"
+                       StartIcon="@Icons.Material.Filled.Download"
+                       Style="border-radius:24px; font-weight:600;"
+                       Disabled="@_gerandoPdf"
+                       OnClick="BaixarReciboJsAsync">
+                @if (_gerandoPdf)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-1" />
+                    <span>Gerando PDF...</span>
+                }
+                else
+                {
+                    <span>Baixar Recibo</span>
+                }
+            </MudButton>
+        }
+        <MudButton Variant="Variant.Outlined" Color="MudColor.Default" Style="border-radius:24px;" OnClick="@(() => _modalAberto = false)">
+            Fechar
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
 @code {
     private List<DoacaoSelfDto> _doacoes = new();
     private bool _carregando = true;
     private List<string> _erros = new();
 
+    private bool _modalAberto;
+    private DoacaoSelfDto? _doacaoSelecionada;
+    private bool _gerandoPdf;
+
     private decimal _totalDoado => _doacoes
-        .Where(d => d.StatusDoacao.ToString().ToUpper().Contains("APROVADA"))
+        .Where(d => EhAprovada(d.StatusDoacao))
         .Sum(d => d.ValorDoacao);
 
     private static readonly System.Globalization.CultureInfo _culturaBR = new("pt-BR");
@@ -103,17 +184,53 @@ else
         _carregando = false;
     }
 
-    // Método responsável por mapear a cor dinamicamente
-    private Color ObterCorStatus(object status)
+    private void OnRowClick(TableRowClickEventArgs<DoacaoSelfDto> args)
+    {
+        _doacaoSelecionada = args.Item;
+        _modalAberto = true;
+    }
+
+    private bool EhAprovada(object status)
     {
         var statusStr = status?.ToString()?.ToUpper() ?? "";
+        return statusStr.Contains("APROVADA") || statusStr == "1";
+    }
 
-        if (statusStr.Contains("APROVADA") || statusStr == "1")
-            return Color.Success; // Verde
+    private MudColor ObterCorStatus(object status)
+    {
+        if (EhAprovada(status))
+            return MudColor.Success;
 
+        var statusStr = status?.ToString()?.ToUpper() ?? "";
         if (statusStr.Contains("RECUSADA") || statusStr.Contains("REPROVADA") || statusStr == "2")
-            return Color.Error; // Vermelho
+            return MudColor.Error;
 
-        return Color.Default; // Cinza (Processando ou outros)
+        return MudColor.Default;
+    }
+
+    private async Task BaixarReciboJsAsync()
+    {
+        if (_doacaoSelecionada is null) return;
+
+        _gerandoPdf = true;
+
+        try
+        {
+            var nomeArquivo = $"Recibo_Doacao_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
+
+            // Aguarda um ciclo de renderização para garantir que o DOM está pronto
+            await Task.Delay(50);
+
+            // Chama o script html2pdf registrado no index.html
+            await JS.InvokeVoidAsync("baixarReciboPdf", "recibo-impressao", nomeArquivo);
+        }
+        catch (Exception ex)
+        {
+            _erros.Add($"Erro ao gerar recibo em PDF: {ex.Message}");
+        }
+        finally
+        {
+            _gerandoPdf = false;
+        }
     }
 }
